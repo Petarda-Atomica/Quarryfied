@@ -8,8 +8,15 @@
 #include <glbinding/glbinding.h>
 #include <glbinding/gl/gl.h>
 #include <glbinding/Binding.h>
+#include <vector>
+#include "SDL3/SDL_video.h"
 #include "glbinding/gl/enum.h"
 #include "glbinding/gl/functions.h"
+#include "glbinding/gl/types.h"
+
+// Utils
+#include "shader.hpp"
+#include "structs.hpp"
 
 using namespace gl;
 
@@ -48,8 +55,10 @@ int main(int argc, char* argv[]) {
         spdlog::critical("Failed to initialize SDL3");
         return 1;
     }
+
+    // SDL Attributes
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
     // SDL3 debugging
@@ -75,6 +84,33 @@ int main(int argc, char* argv[]) {
         glDebugMessageCallback(glErrCallback, nullptr);
     #endif
 
+    // OpenGL settings
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    // Load shaders
+    Shader mainShader("assets/shaders/vertex.glsl", "assets/shaders/fragment.glsl");
+    mainShader.use();
+
+    // Dummy data
+    CubeFace myFace;
+    myFace.orientation = packCubeFaceOrientation(0, 0, 0);
+    myFace.x = -0.5f;
+    myFace.y = 0.0f;
+    myFace.z = 0.0f;
+    std::vector<CubeFace>seeds;
+    seeds.push_back(myFace);
+
+    // Create VAO
+    GLuint VAO;
+    glGenVertexArrays(1, &VAO);
+
+    // Create SSBO
+    GLuint SSBO;
+    glGenBuffers(1, &SSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
+    glBufferData(gl::GLenum::GL_SHADER_STORAGE_BUFFER, seeds.size() * sizeof(CubeFace), seeds.data(), GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, SSBO);
+
     // Main loop
     spdlog::info("Initialization finished! Entering main loop.");
     glClearColor(0.45f, 0.71f, 0.95f, 1.0f);
@@ -90,6 +126,8 @@ int main(int argc, char* argv[]) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Really cool rendering logic
+        glBindVertexArray(VAO);
+        glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 1);
         // ------------------------ //
 
         // Swap
