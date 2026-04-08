@@ -10,14 +10,14 @@ layout(std430, binding = 1) readonly buffer MaterialData {
     Material materials[];
 };
 
-flat in uint materialIdx;
+flat in uint drawID;
 in vec2 uv;
 
 out vec4 FragColor;
 
 void main()
 {
-    sampler2D tex = materials[materialIdx].diffuseTex;
+    sampler2D tex = materials[drawID].diffuseTex;
 
-    FragColor = texture(tex, uv) * materials[materialIdx].baseColor;
+    FragColor = texture(tex, uv) * materials[drawID].baseColor;
 }

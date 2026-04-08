@@ -11,7 +11,7 @@ layout(std430, binding = 0) readonly buffer QuadData {
 
 uniform mat4 uVP; // View-Projection Matrix
 
-flat out uint materialIdx;
+flat out uint drawID;
 out vec2 uv;
 
 // Function to build a 90-degree increment rotation matrix
@@ -54,7 +54,7 @@ void main() {
     gl_Position = vec4(pos + data.center, 1.0);
 
     // Send material data
-    materialIdx = 0;
+    drawID = gl_DrawID;
     if (gl_VertexID == 0) uv = vec2(0.0, 0.0);
     if (gl_VertexID == 1) uv = vec2(1.0, 0.0);
     if (gl_VertexID == 2) uv = vec2(0.0, 1.0);

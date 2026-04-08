@@ -1,4 +1,5 @@
 // Logging
+#include "glbinding/gl/bitfield.h"
 #include <spdlog/spdlog.h>
 
 // I/O management
@@ -94,13 +95,34 @@ int main(int argc, char* argv[]) {
     Shader mainShader("assets/shaders/vertex.glsl", "assets/shaders/fragment.glsl");
     mainShader.use();
 
-    // Dummy verticies
+    // Dummy verticies1
+    std::vector<CubeFace>seeds;
     CubeFace myFace;
     myFace.orientation = packCubeFaceOrientation(0, 0, 0);
-    myFace.x = -0.3f;
-    myFace.y = 0.0f;
+    myFace.x = -0.5f;
+    myFace.y = -0.5f;
     myFace.z = 0.0f;
-    std::vector<CubeFace>seeds;
+    seeds.push_back(myFace);
+
+    // Dummy verticies2
+    myFace.orientation = packCubeFaceOrientation(0, 0, 0);
+    myFace.x = 0.5f;
+    myFace.y = -0.5f;
+    myFace.z = 0.0f;
+    seeds.push_back(myFace);
+
+    // Dummy verticies3
+    myFace.orientation = packCubeFaceOrientation(0, 0, 0);
+    myFace.x = -0.5f;
+    myFace.y = 0.5f;
+    myFace.z = 0.0f;
+    seeds.push_back(myFace);
+
+    // Dummy verticies4
+    myFace.orientation = packCubeFaceOrientation(0, 0, 0);
+    myFace.x = 0.5f;
+    myFace.y = 0.5f;
+    myFace.z = 0.0f;
     seeds.push_back(myFace);
 
     // Dummy texture
@@ -128,6 +150,20 @@ int main(int argc, char* argv[]) {
     myMaterial.baseColor[3] = 1.0f;
     std::vector<Material>materials;
     materials.push_back(myMaterial);
+
+    // Dummy MDI data
+    std::vector<DrawArraysIndirectCommand>drawCommands;
+    DrawArraysIndirectCommand cmd;
+    cmd.count = 4;
+    cmd.instanceCount = 4;
+    cmd.first = 0;
+    cmd.baseInstance = 0;
+    drawCommands.push_back(cmd);
+
+    // Upload MDI data
+    GLuint cmdBuffer;
+    glCreateBuffers(1, &cmdBuffer);
+    glNamedBufferStorage(cmdBuffer, drawCommands.size() * sizeof(DrawArraysIndirectCommand), drawCommands.data(), GL_DYNAMIC_STORAGE_BIT);
 
     // Create VAO
     GLuint VAO;
@@ -163,7 +199,13 @@ int main(int argc, char* argv[]) {
 
         // Really cool rendering logic
         glBindVertexArray(VAO);
-        glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, 1);
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, cmdBuffer);
+        glMultiDrawArraysIndirect(
+            GL_TRIANGLE_STRIP,
+            (void*)0,
+            drawCommands.size(),
+            0
+        );
         // ------------------------ //
 
         // Swap
