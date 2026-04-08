@@ -19,7 +19,7 @@ struct DrawArraysIndirectCommand {
     uint32_t count;         // Number of vertices
     uint32_t instanceCount; // Number of quads to draw
     uint32_t first;         // Starting vertex
-    uint32_t baseInstance;  // Offset for gl_BaseInstance
+    uint32_t baseInstance;  // Material ID
 };
 
 int packCubeFaceOrientation(int x, int y, int z) {
