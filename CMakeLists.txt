@@ -31,6 +31,15 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME}
     SDL3::SDL3
     glbinding::glbinding
     glm::glm
+    spdlog::spdlog
+)
+
+# Copy the assets folder to the build directory
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/assets"
+    COMMENT "Copying assets to build directory..."
 )
 
 # Stuff to please IDEs

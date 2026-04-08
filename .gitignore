@@ -7,4 +7,4 @@ bin/
 .vscode/
 .zed/
 .clangd
-compile_commands.json  <-- ADD THIS
+compile_commands.json

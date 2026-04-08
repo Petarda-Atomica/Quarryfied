@@ -32,3 +32,12 @@ FetchContent_Declare(
 )
 MESSAGE(STATUS "Configuring remote external dependency: GLM")
 FetchContent_MakeAvailable(GLM)
+
+# --- spdlog (Logging) ---
+FetchContent_Declare(
+  spdlog
+  GIT_REPOSITORY  https://github.com/gabime/spdlog.git
+  GIT_TAG         v1.17.0
+)
+MESSAGE(STATUS "Configuring remote external dependency: spdlog")
+FetchContent_MakeAvailable(spdlog)
