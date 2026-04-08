@@ -1,0 +1,10 @@
+# Build directories
+build/
+out/
+bin/
+
+# IDE files
+.vscode/
+.zed/
+.clangd
+compile_commands.json  <-- ADD THIS
