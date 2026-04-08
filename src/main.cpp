@@ -3,6 +3,8 @@
 
 // I/O management
 #include <SDL3/SDL.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 // OpenGL
 #include <glbinding/glbinding.h>
@@ -13,6 +15,7 @@
 #include "glbinding/gl/enum.h"
 #include "glbinding/gl/functions.h"
 #include "glbinding/gl/types.h"
+#include "glbinding/gl/functions-patches.h"
 
 // Utils
 #include "shader.hpp"
@@ -91,25 +94,58 @@ int main(int argc, char* argv[]) {
     Shader mainShader("assets/shaders/vertex.glsl", "assets/shaders/fragment.glsl");
     mainShader.use();
 
-    // Dummy data
+    // Dummy verticies
     CubeFace myFace;
     myFace.orientation = packCubeFaceOrientation(0, 0, 0);
-    myFace.x = -0.5f;
+    myFace.x = -0.3f;
     myFace.y = 0.0f;
     myFace.z = 0.0f;
     std::vector<CubeFace>seeds;
     seeds.push_back(myFace);
 
+    // Dummy texture
+    stbi_set_flip_vertically_on_load(true);
+    int width, height, nch;
+    unsigned char* imgData = stbi_load("assets/textures/grass.png", &width, &height, &nch, 4);
+    GLuint textureID;
+    glCreateTextures(GL_TEXTURE_2D, 1, &textureID);
+    glTextureStorage2D(textureID, 1, GL_RGBA8, width, height);
+    glTextureSubImage2D(textureID, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, imgData);
+    glTextureParameteri(textureID, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTextureParameteri(textureID, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTextureParameteri(textureID, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTextureParameteri(textureID, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    GLuint64 handle = glGetTextureHandleARB(textureID);
+    glMakeTextureHandleResidentARB(handle);
+    stbi_image_free(imgData);
+
+    // Dummy material
+    Material myMaterial;
+    myMaterial.textureHandle = handle;
+    myMaterial.baseColor[0] = 1.0f;
+    myMaterial.baseColor[1] = 1.0f;
+    myMaterial.baseColor[2] = 1.0f;
+    myMaterial.baseColor[3] = 1.0f;
+    std::vector<Material>materials;
+    materials.push_back(myMaterial);
+
     // Create VAO
     GLuint VAO;
     glGenVertexArrays(1, &VAO);
 
-    // Create SSBO
-    GLuint SSBO;
-    glGenBuffers(1, &SSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, SSBO);
-    glBufferData(gl::GLenum::GL_SHADER_STORAGE_BUFFER, seeds.size() * sizeof(CubeFace), seeds.data(), GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, SSBO);
+    // Create seeds SSBO
+    GLuint seedsSSBO;
+    glGenBuffers(1, &seedsSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, seedsSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, seeds.size() * sizeof(CubeFace), seeds.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, seedsSSBO);
+
+    // Create materials SSBO
+    GLuint materialsSSBO;
+    glGenBuffers(1, &materialsSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, materialsSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, materials.size() * sizeof(Material), materials.data(), GL_STATIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, materialsSSBO);
 
     // Main loop
     spdlog::info("Initialization finished! Entering main loop.");

@@ -8,3 +8,6 @@ bin/
 .zed/
 .clangd
 compile_commands.json
+
+# Stuff under copyright
+assets/textures/grass.png

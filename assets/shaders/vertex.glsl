@@ -11,6 +11,9 @@ layout(std430, binding = 0) readonly buffer QuadData {
 
 uniform mat4 uVP; // View-Projection Matrix
 
+flat out uint materialIdx;
+out vec2 uv;
+
 // Function to build a 90-degree increment rotation matrix
 mat3 getRotationMatrix(int steps, vec3 axis) {
     float angle = float(steps) * 1.57079632679; // steps * PI/2
@@ -49,4 +52,11 @@ void main() {
 
     // Final transform
     gl_Position = vec4(pos + data.center, 1.0);
+
+    // Send material data
+    materialIdx = 0;
+    if (gl_VertexID == 0) uv = vec2(0.0, 0.0);
+    if (gl_VertexID == 1) uv = vec2(1.0, 0.0);
+    if (gl_VertexID == 2) uv = vec2(0.0, 1.0);
+    if (gl_VertexID == 3) uv = vec2(1.0, 1.0);
 }
