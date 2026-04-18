@@ -9,7 +9,13 @@ layout(std430, binding = 0) readonly buffer QuadData {
     QuadSeed seeds[];
 };
 
-uniform mat4 uVP; // View-Projection Matrix
+layout(std430, binding = 2) readonly buffer CameraData {
+    mat4 projection;
+    mat4 view;
+    mat4 viewProjection;
+    vec4 cameraPos;
+    vec2 viewportSize;
+} camera;
 
 flat out uint drawID;
 out vec2 uv;
@@ -51,7 +57,7 @@ void main() {
     pos = R * pos;
 
     // Final transform
-    gl_Position = vec4(pos + data.center, 1.0);
+    gl_Position = camera.viewProjection * vec4(pos + data.center, 1.0);
 
     // Send material data
     drawID = gl_BaseInstance;

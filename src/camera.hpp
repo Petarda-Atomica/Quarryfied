@@ -1,0 +1,162 @@
+#ifndef CAMERA_H
+#define CAMERA_H
+
+#ifndef CAMERA_FLAGS
+#define CAMERA_FLAGS GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT
+#endif
+
+#include <cstring>
+#include <glbinding/glbinding.h>
+#include <glbinding/gl/bitfield.h>
+#include <glbinding/gl/enum.h>
+#include <glbinding/gl/functions.h>
+#include <glbinding/gl/types.h>
+#include <glm/ext/matrix_float4x4.hpp>
+#include <glm/ext/vector_float2.hpp>
+#include <glm/ext/vector_float3.hpp>
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/trigonometric.hpp>
+
+using namespace gl;
+
+class Camera {
+public:
+    // Constructor
+    Camera(glm::vec3 position, float fov, glm::vec2 viewportSize) : position(position), fov(fov), viewportSize(viewportSize) {
+        // Create the camera on the GPU side
+        glCreateBuffers(1, &cameraSSBO);
+        glNamedBufferStorage(cameraSSBO, sizeof(CameraData), nullptr, CAMERA_FLAGS);
+        gl_mappedCamera = (CameraData*)glMapNamedBufferRange(
+            cameraSSBO,
+            0,
+            sizeof(CameraData),
+            CAMERA_FLAGS
+        );
+
+        // Add some default values to the camera
+        lookAt(glm::vec3(0.0f, 0.0f, 0.0f));
+        update();
+    }
+
+    ~Camera() {
+        glUnmapNamedBuffer(cameraSSBO);
+        glDeleteBuffers(1, &cameraSSBO);
+    }
+
+    // Use this camera
+    void bind(GLuint id) {
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, id, cameraSSBO);
+    }
+
+    // Update the camera
+    void update() {
+        updateProjection();
+        auto viewProjection = matProjection * matView;
+
+        // Create temp camera object
+        CameraData temp;
+        temp.projection = matProjection;
+        temp.view = matView;
+        temp.viewProjection = viewProjection;
+        temp.cameraPos = position;
+        temp.viewportSize = viewportSize;
+
+        // Memcpy into place
+        std::memcpy(gl_mappedCamera, &temp, sizeof(CameraData));
+    }
+
+    // Look at a specific coordinate
+    void lookAt(glm::vec3 look) {
+        // Make the view mat
+        matView = glm::lookAt(
+            position,
+            look,
+            glm::vec3(0, 1, 0)
+        );
+
+        // Extract angles
+        glm::quat q = glm::quat_cast(glm::inverse(matView));
+        angle.x = glm::pitch(q);
+        angle.y = glm::yaw(q);
+        angle.z = glm::roll(q);
+    }
+
+    // Set the camera angle
+    void setAngle(glm::vec3 new_angle) {
+        // Change angle
+        angle = new_angle;
+
+        // Make new view matrix
+        glm::mat4 new_view = glm::mat4(1.0f);
+        new_view = glm::rotate(new_view, glm::radians(angle.x), glm::vec3(1.0f, 0.0f, 0.0f));
+        new_view = glm::rotate(new_view, glm::radians(angle.y), glm::vec3(0.0f, 1.0f, 0.0f));
+        new_view = glm::rotate(new_view, glm::radians(angle.z), glm::vec3(0.0f, 0.0f, 1.0f));
+        new_view = glm::translate(new_view, -position);
+
+        // Replace old view matrix
+        matView = new_view;
+    }
+
+    // Returns the camera angle
+    glm::vec3 getAngle() {
+        return angle;
+    }
+
+    // Set camera position
+    void setPos(glm::vec3 new_pos) {
+        position = new_pos;
+    }
+
+    // Get camera position
+    glm::vec3 getPos() {
+        return position;
+    }
+
+    // Set camera FOV
+    void setFov(GLuint new_fov) {
+        fov = new_fov;
+        updateProjection();
+    }
+
+    // Get camera FOV
+    GLuint getFov() {
+        return fov;
+    }
+
+    // Set viewport size
+    void setViewportSize(glm::vec2 new_size) {
+        viewportSize = new_size;
+        updateProjection();
+    }
+
+private:
+    glm::vec3 angle;
+    glm::vec3 position;
+    float fov;
+    glm::vec2 viewportSize;
+
+    glm::mat4 matProjection;
+    glm::mat4 matView;
+
+    struct CameraData {
+        glm::mat4 projection;
+        glm::mat4 view;
+        glm::mat4 viewProjection;
+
+        alignas(16) glm::vec3 cameraPos;
+        float _padding;
+
+        alignas(8) glm::vec2 viewportSize;
+    };
+
+    GLuint cameraSSBO;
+    CameraData* gl_mappedCamera;
+
+    void updateProjection() {
+        matProjection = glm::perspective(fov, viewportSize.x / viewportSize.y, 0.1f, 100.0f);
+    }
+};
+
+#endif

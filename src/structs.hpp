@@ -1,6 +1,5 @@
-// Struct for holding the data for each cube face
-#include "glbinding/gl/types.h"
 #include <cstdint>
+#include <glbinding/gl/types.h>
 
 using namespace gl;
 

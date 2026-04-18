@@ -1,6 +1,9 @@
 // Logging
 #include "SDL3/SDL_events.h"
 #include "glbinding/gl/bitfield.h"
+#include "glm/ext/vector_float2.hpp"
+#include "glm/ext/vector_float3.hpp"
+#include "glm/trigonometric.hpp"
 #include <spdlog/spdlog.h>
 
 // I/O management
@@ -21,7 +24,9 @@
 
 // Utils
 #include "shader.hpp"
+#include "camera.hpp"
 #include "structs.hpp"
+
 
 using namespace gl;
 
@@ -192,6 +197,13 @@ int main(int argc, char* argv[]) {
     glBufferData(GL_SHADER_STORAGE_BUFFER, materials.size() * sizeof(Material), materials.data(), GL_STATIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, materialsSSBO);
 
+    Camera mainCamera(
+        glm::vec3(4, 3, 3),
+        glm::radians(45.0f),
+        glm::vec2(1280, 720)
+    );
+    mainCamera.bind(2);
+
     // Main loop
     spdlog::info("Initialization finished! Entering main loop.");
     glClearColor(0.45f, 0.71f, 0.95f, 1.0f);
@@ -205,9 +217,7 @@ int main(int argc, char* argv[]) {
                 running = false;
                 break;
             case SDL_EVENT_WINDOW_RESIZED:
-                int w = event.window.data1;
-                int h = event.window.data2;
-                windowResizeCallback(w, h);
+                windowResizeCallback(event.window.data1, event.window.data2);
                 break;
             }
         }
