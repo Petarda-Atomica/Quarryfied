@@ -1,4 +1,5 @@
 // Logging
+#include "SDL3/SDL_events.h"
 #include "glbinding/gl/bitfield.h"
 #include <spdlog/spdlog.h>
 
@@ -49,6 +50,14 @@ void glErrCallback(GLenum source, GLenum type, GLuint id,
 }
 #endif
 
+void windowResizeCallback(int new_width, int new_height) {
+    // Make sure the window isn't minimized or bugged
+    if (new_height <= 0 || new_width <= 0) return;
+
+    // Update viewport
+    glViewport(0, 0, new_width, new_height);
+}
+
 int main(int argc, char* argv[]) {
     // Start
     spdlog::info("Starting Quarryfied...");
@@ -72,7 +81,7 @@ int main(int argc, char* argv[]) {
 
     // Make window
     spdlog::info("Creating window...");
-    SDL_Window* window = SDL_CreateWindow("Quarryfied", 1280, 720, SDL_WINDOW_OPENGL);
+    SDL_Window* window = SDL_CreateWindow("Quarryfied", 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     SDL_GLContext glContext = SDL_GL_CreateContext(window);
 
     // Init glbinding
@@ -191,7 +200,16 @@ int main(int argc, char* argv[]) {
         // Poll SDL events
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_EVENT_QUIT) running = false;
+            switch (event.type) {
+            case SDL_EVENT_QUIT:
+                running = false;
+                break;
+            case SDL_EVENT_WINDOW_RESIZED:
+                int w = event.window.data1;
+                int h = event.window.data2;
+                windowResizeCallback(w, h);
+                break;
+            }
         }
 
         // Clear screen
