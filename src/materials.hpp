@@ -11,6 +11,7 @@
 #include <string>
 #include <sys/types.h>
 #include <vector>
+#include <unordered_map>
 
 using namespace gl;
 
@@ -47,6 +48,11 @@ public:
      * @brief Free up memory
      */
     void destroy() {
+        // Destroy all materials
+        for (int i = 0; i < Materials.size(); i++) {
+            destroyMaterial(Materials[i]);
+        }
+
         // Delete GPU memory
         glDeleteBuffers(1, &materialsSSBO);
 
@@ -94,7 +100,9 @@ public:
     uint newMaterial(std::string texturePath, std::optional<glm::vec4> baseColor = std::nullopt) {
         // Load texture
         GPUMaterial thisMat;
-        thisMat.textureHandle = fileToResidentTexture(texturePath);
+        GLuint texID;
+        thisMat.textureHandle = fileToResidentTexture(texturePath, &texID);
+        textureRegistry[thisMat.textureHandle] = texID;
 
         // Load base color
         if (baseColor.has_value()) {
@@ -111,17 +119,18 @@ public:
     }
 
     /*
-     * @brief Overrides a material on the CPU and GPU.
-     * @warning Doesn't free up memory
+     * @brief Overrides a material in the internal vector.
      * @param id Represents the ID at which the material is located
      * @param GPUupdate Determines if updates are immediately propagated to the GPU
      * @param texturePath Represents the path to the file containing the texture for this material
      * @param baseColor Represents the color to multiply the texture with
      */
-    void updateGPUMaterial(uint id, bool GPUupdate, std::string texturePath, std::optional<glm::vec4> baseColor = std::nullopt) {
+    void updateMaterial(uint id, bool GPUupdate, std::string texturePath, std::optional<glm::vec4> baseColor = std::nullopt) {
         // Load texture
         GPUMaterial thisMat;
-        thisMat.textureHandle = fileToResidentTexture(texturePath);
+        GLuint texID;
+        thisMat.textureHandle = fileToResidentTexture(texturePath, &texID);
+        textureRegistry[thisMat.textureHandle] = texID;
 
         // Load base color
         if (baseColor.has_value()) {
@@ -129,6 +138,9 @@ public:
         } else {
             thisMat.baseColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
         }
+
+        // Free up memory from previous material
+        destroyMaterial(Materials[id]);
 
         // Update on CPU
         Materials[id] = thisMat;
@@ -139,21 +151,30 @@ public:
 
 private:
     GLuint materialsSSBO;
+    std::unordered_map<GLuint64, GLuint> textureRegistry; // Stores texture IDs
 
-    GLuint64 fileToResidentTexture(std::string path) {
+    void destroyMaterial(GPUMaterial mat) {
+        if (mat.textureHandle != 0) {
+            if (glIsTextureHandleResidentARB(mat.textureHandle))
+                glMakeTextureHandleNonResidentARB(mat.textureHandle);
+            glDeleteTextures(1, &textureRegistry[mat.textureHandle]);
+            textureRegistry.erase(mat.textureHandle);
+        }
+    }
+
+    GLuint64 fileToResidentTexture(std::string path, GLuint* textureID) {
         // Image loading stuff - Don't touch it
         stbi_set_flip_vertically_on_load(true);
         int width, height, nch;
         unsigned char* imgData = stbi_load(path.c_str(), &width, &height, &nch, 4);
-        GLuint textureID;
-        glCreateTextures(GL_TEXTURE_2D, 1, &textureID);
-        glTextureStorage2D(textureID, 1, GL_RGBA8, width, height);
-        glTextureSubImage2D(textureID, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, imgData);
-        glTextureParameteri(textureID, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTextureParameteri(textureID, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTextureParameteri(textureID, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTextureParameteri(textureID, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        GLuint64 handle = glGetTextureHandleARB(textureID);
+        glCreateTextures(GL_TEXTURE_2D, 1, textureID);
+        glTextureStorage2D(*textureID, 1, GL_RGBA8, width, height);
+        glTextureSubImage2D(*textureID, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, imgData);
+        glTextureParameteri(*textureID, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTextureParameteri(*textureID, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTextureParameteri(*textureID, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTextureParameteri(*textureID, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        GLuint64 handle = glGetTextureHandleARB(*textureID);
         glMakeTextureHandleResidentARB(handle);
         stbi_image_free(imgData);
 
