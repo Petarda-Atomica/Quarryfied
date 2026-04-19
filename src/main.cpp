@@ -243,6 +243,7 @@ int main(int argc, char* argv[]) {
     }
 
     spdlog::info("Doing cleanup...");
+    mainCamera.destroy();
     SDL_GL_DestroyContext(glContext);
     SDL_DestroyWindow(window);
     SDL_Quit();

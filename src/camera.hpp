@@ -40,7 +40,7 @@ public:
         update();
     }
 
-    ~Camera() {
+    void destroy() {
         glUnmapNamedBuffer(cameraSSBO);
         glDeleteBuffers(1, &cameraSSBO);
     }
