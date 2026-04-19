@@ -55,12 +55,13 @@ void glErrCallback(GLenum source, GLenum type, GLuint id,
 }
 #endif
 
-void windowResizeCallback(int new_width, int new_height) {
+void windowResizeCallback(int new_width, int new_height, Camera* cam) {
     // Make sure the window isn't minimized or bugged
     if (new_height <= 0 || new_width <= 0) return;
 
     // Update viewport
     glViewport(0, 0, new_width, new_height);
+    cam->setViewportSize(glm::vec2(new_width, new_height));
 }
 
 int main(int argc, char* argv[]) {
@@ -217,10 +218,11 @@ int main(int argc, char* argv[]) {
                 running = false;
                 break;
             case SDL_EVENT_WINDOW_RESIZED:
-                windowResizeCallback(event.window.data1, event.window.data2);
+                windowResizeCallback(event.window.data1, event.window.data2, &mainCamera);
                 break;
             }
         }
+        mainCamera.update();
 
         // Clear screen
         glClear(GL_COLOR_BUFFER_BIT);
