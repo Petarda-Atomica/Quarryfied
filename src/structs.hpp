@@ -8,12 +8,6 @@ struct CubeFace {
     int orientation;
 };
 
-struct Material {
-    GLuint64 textureHandle;
-    char padding[8];
-    float baseColor[4];
-};
-
 struct DrawArraysIndirectCommand {
     uint32_t count;         // Number of vertices
     uint32_t instanceCount; // Number of quads to draw
