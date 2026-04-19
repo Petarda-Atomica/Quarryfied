@@ -21,9 +21,17 @@
 
 using namespace gl;
 
+/*
+ * @brief Class used for creating and using basic cameras in OpenGL
+ */
 class Camera {
 public:
-    // Constructor
+    /*
+     * @brief Class constructor
+     * @param position Represents the camera's position in the world
+     * @param fov Represents the camera's FOV(Field of Vision)
+     * @param viewportSize Represents the viewport's size
+     */
     Camera(glm::vec3 position, float fov, glm::vec2 viewportSize) : position(position), fov(fov), viewportSize(viewportSize) {
         // Create the camera on the GPU side
         glCreateBuffers(1, &cameraSSBO);
@@ -40,17 +48,26 @@ public:
         update();
     }
 
+    /*
+     * @brief Destroy Camera and free up space
+     */
     void destroy() {
         glUnmapNamedBuffer(cameraSSBO);
         glDeleteBuffers(1, &cameraSSBO);
     }
 
-    // Use this camera
+    /**
+     * @brief Binds this camera.
+     * Make sure to bind every frame or at least once at the start.
+     * @param binding Represents the position to bind in layout
+     */
     void bind(GLuint id) {
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, id, cameraSSBO);
     }
 
-    // Update the camera
+    /*
+     * @brief Updates camera data
+     */
     void update() {
         updateProjection();
         auto viewProjection = matProjection * matView;
@@ -67,7 +84,10 @@ public:
         std::memcpy(gl_mappedCamera, &temp, sizeof(CameraData));
     }
 
-    // Look at a specific coordinate
+    /*
+     * @brief Makes the camera look at a specific coordinate
+     * @param look Represents the coordinate to look at
+     */
     void lookAt(glm::vec3 look) {
         // Make the view mat
         matView = glm::lookAt(
@@ -83,7 +103,13 @@ public:
         angle.z = glm::roll(q);
     }
 
-    // Set the camera angle
+    /*
+     * @brief Sets the camera's angle
+     * @param new_angle Represent the angle(in degrees) at which to set the camera:
+     * - `X` -> pitch
+     * - `Y` -> yaw
+     * - `Z` -> roll
+     */
     void setAngle(glm::vec3 new_angle) {
         // Change angle
         angle = new_angle;
@@ -99,33 +125,51 @@ public:
         matView = new_view;
     }
 
-    // Returns the camera angle
+    /*
+     * @brief Returns the camera angle
+     * @return Returns the camera angle
+     */
     glm::vec3 getAngle() {
         return angle;
     }
 
-    // Set camera position
+    /*
+     * @brief Sets the camera's position in the world
+     * @param new_pos Represents the new camera position
+     */
     void setPos(glm::vec3 new_pos) {
         position = new_pos;
     }
 
-    // Get camera position
+    /*
+     * @brief Returns the camera position
+     * @return Returns the camera position
+     */
     glm::vec3 getPos() {
         return position;
     }
 
-    // Set camera FOV
+    /*
+     * @brief Sets the camera's FOV(Field of Vision)
+     * @param new_fov Represents the new camera FOV in degrees
+     */
     void setFov(GLuint new_fov) {
         fov = new_fov;
         updateProjection();
     }
 
-    // Get camera FOV
+    /*
+     * @brief Returns the camera FOV(Field of Vision)
+     * @return Returns the camera FOV
+     */
     GLuint getFov() {
         return fov;
     }
 
-    // Set viewport size
+    /*
+     * @brief Sets the viewport size
+     * @param new_size Represents the new viewport size
+     */
     void setViewportSize(glm::vec2 new_size) {
         viewportSize = new_size;
         updateProjection();
