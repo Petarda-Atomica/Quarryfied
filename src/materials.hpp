@@ -1,5 +1,6 @@
 #ifndef MATERIAL_H
 #define MATERIAL_H
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -101,9 +102,16 @@ public:
         // Load texture
         GPUMaterial thisMat;
         GLuint texID;
-        thisMat.textureHandle = fileToResidentTexture(texturePath, &texID);
-        textureRegistry[thisMat.textureHandle] = texID;
+        if (!fileRegistry.contains(texturePath)) {
+            thisMat.textureHandle = fileToResidentTexture(texturePath, &texID);
+            textureRegistry[thisMat.textureHandle] = texID;
+            fileRegistry[texturePath] = thisMat.textureHandle;
+        } else {
+            thisMat.textureHandle = fileRegistry[texturePath];
+        }
 
+        //! Planned deprecation
+        // TODO: Deprecate
         // Load base color
         if (baseColor.has_value()) {
             thisMat.baseColor = baseColor.value();
@@ -129,8 +137,12 @@ public:
         // Load texture
         GPUMaterial thisMat;
         GLuint texID;
-        thisMat.textureHandle = fileToResidentTexture(texturePath, &texID);
-        textureRegistry[thisMat.textureHandle] = texID;
+        if (!fileRegistry.contains(texturePath)) {
+            thisMat.textureHandle = fileToResidentTexture(texturePath, &texID);
+            textureRegistry[thisMat.textureHandle] = texID;
+        } else {
+            thisMat.textureHandle = fileRegistry[texturePath];
+        }
 
         // Load base color
         if (baseColor.has_value()) {
@@ -139,8 +151,10 @@ public:
             thisMat.baseColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
         }
 
+        //! This is unsafe now
+        // TODO: Fix
         // Free up memory from previous material
-        destroyMaterial(Materials[id]);
+        // destroyMaterial(Materials[id]);
 
         // Update on CPU
         Materials[id] = thisMat;
@@ -151,9 +165,12 @@ public:
 
 private:
     GLuint materialsSSBO;
-    std::unordered_map<GLuint64, GLuint> textureRegistry; // Stores texture IDs
+    std::unordered_map<GLuint64, GLuint> textureRegistry; // Crossrefrence bindless texture to block ID
+    std::unordered_map<std::string, GLuint> fileRegistry; // Crossrefrence file name to bindless texture
 
     void destroyMaterial(GPUMaterial mat) {
+        if (!textureRegistry.contains(mat.textureHandle)) return;
+
         if (mat.textureHandle != 0) {
             if (glIsTextureHandleResidentARB(mat.textureHandle))
                 glMakeTextureHandleNonResidentARB(mat.textureHandle);

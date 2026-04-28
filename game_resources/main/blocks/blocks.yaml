@@ -1,0 +1,23 @@
+dirt:
+  metadata:
+    tags: ["organic", "soil"]
+  visuals:
+    texture:
+      top: "dirt.png"
+      bottom: "dirt.png"
+      north: "dirt.png"
+      east: "dirt.png"
+      south: "dirt.png"
+      west: "dirt.png"
+  physics:
+    affected_by_gravity: false
+    solid: true
+    flammable: false
+    friction: 1
+  logic: None
+
+grass:
+  inherit: "dirt"
+  visuals:
+    texture:
+      top: "grass.png"

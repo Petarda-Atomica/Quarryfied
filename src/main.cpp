@@ -23,6 +23,7 @@
 #include "shader.hpp"
 #include "camera.hpp"
 #include "materials.hpp"
+#include "blocks.hpp"
 #include "structs.hpp"
 
 
@@ -175,6 +176,9 @@ int main(int argc, char* argv[]) {
         glm::vec2(1280, 720)
     );
     mainCamera.bind(2);
+
+    BlocksManager aManager(&materials);
+    aManager.loadBlocks("main");
 
     // Main loop
     spdlog::info("Initialization finished! Entering main loop.");

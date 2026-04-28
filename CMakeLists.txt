@@ -4,6 +4,7 @@ PROJECT(Quarryfied VERSION 0.0.1 LANGUAGES C CXX)
 SET(CMAKE_CXX_STANDARD 20)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 INCLUDE(InteliSense)
 
@@ -33,7 +34,12 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME}
     glbinding::glbinding
     glm::glm
     spdlog::spdlog
+    lua_lib
+    ryml::ryml
 )
+
+# Include LuaBridge3
+TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE ${luabridge_SOURCE_DIR}/Source)
 
 # Copy the assets folder to the build directory
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
@@ -41,6 +47,14 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         "${CMAKE_CURRENT_SOURCE_DIR}/assets"
         "$<TARGET_FILE_DIR:${PROJECT_NAME}>/assets"
     COMMENT "Copying assets to build directory..."
+)
+
+# Copy the game_resources folder to the build directory
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/game_resources"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/game_resources"
+    COMMENT "Copying game_resources to build directory..."
 )
 
 # Stuff to please IDEs

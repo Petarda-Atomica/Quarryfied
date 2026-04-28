@@ -41,3 +41,25 @@ FetchContent_Declare(
 )
 MESSAGE(STATUS "Configuring remote external dependency: spdlog")
 FetchContent_MakeAvailable(spdlog)
+
+# --- Lua ---
+include(lua)
+
+# --- LuaBridge3 (Lua) ---
+FetchContent_Declare(
+  luabridge
+  GIT_REPOSITORY  https://github.com/kunitoki/LuaBridge3.git
+  GIT_TAG         master
+)
+MESSAGE(STATUS "Configuring remote external dependency: LuaBridge3")
+FetchContent_MakeAvailable(luabridge)
+
+# --- RapidYAML ---
+FetchContent_Declare(
+  ryml
+  GIT_REPOSITORY  https://github.com/biojppm/rapidyaml.git
+  GIT_TAG         master
+  GIT_SHALLOW     FALSE
+)
+MESSAGE(STATUS "Configuring remote external dependency: ryml")
+FetchContent_MakeAvailable(ryml)
