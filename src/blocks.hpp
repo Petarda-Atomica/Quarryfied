@@ -1,14 +1,11 @@
 #pragma once
 
-#include "c4/substr_fwd.hpp"
-#include "c4/yml/node.hpp"
+#include <c4/substr_fwd.hpp>
+#include <c4/yml/node.hpp>
 #include "materials.hpp"
-#include "spdlog/spdlog.h"
-#include <algorithm>
 #include <ios>
 #include <memory>
 #include <string>
-#include <string_view>
 #include <sys/types.h>
 #include <unordered_map>
 #include <vector>
