@@ -101,7 +101,7 @@ public:
 
         // Iterate over blocks
         auto root = yamlTree.rootref();
-        for (ryml::NodeRef child : root.children()) {std::cout << boost::pfr::io(thisBlock->physics) << std::endl;
+        for (ryml::NodeRef child : root.children()) {
             std::unique_ptr<Block> thisBlock = std::make_unique<Block>();
             std::string blockName(child.key().data(), child.key().size());
 
