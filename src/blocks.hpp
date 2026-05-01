@@ -101,7 +101,7 @@ public:
 
         // Iterate over blocks
         auto root = yamlTree.rootref();
-        for (ryml::NodeRef child : root.children()) {
+        for (ryml::NodeRef child : root.children()) {std::cout << boost::pfr::io(thisBlock->physics) << std::endl;
             std::unique_ptr<Block> thisBlock = std::make_unique<Block>();
             std::string blockName(child.key().data(), child.key().size());
 
@@ -118,6 +118,28 @@ public:
                 // Check for textures
                 if (child["visuals"].has_child("texture"))
                     loadTexturesFromYAMLChild(child["visuals"]["texture"], thisBlock.get(), blocksFolder);
+            }
+
+            // Check for physics properties
+            if (child.has_child("physics")) {
+                auto gravity = child["physics"]["affected_by_gravity"];
+                auto solid = child["physics"]["solid"];
+                auto flammable = child["physics"]["flammable"];
+                auto friction = child["physics"]["friction"];
+
+                if (!gravity.invalid()) gravity >> thisBlock->physics.affectedByGravity;
+                if (!solid.invalid()) solid >> thisBlock->physics.solid;
+                if (!flammable.invalid()) flammable >> thisBlock->physics.flammable;
+                if (!friction.invalid()) friction >> thisBlock->physics.friction;
+            }
+
+            // Check for tags
+            if (child.has_child("metadata") && child["metadata"].has_child("tags")) {
+                ryml::NodeRef tagsNode = child["metadata"]["tags"];
+                thisBlock->tags.reserve(tagsNode.num_children());
+                for (auto const& child : tagsNode.children()) {
+                    thisBlock->tags.emplace_back(child.val().data(), child.val().size());
+                }
             }
 
             // Add to the block registry
