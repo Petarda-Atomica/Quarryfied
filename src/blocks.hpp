@@ -1,5 +1,4 @@
-#ifndef BLOCKS_H
-#define BLOCKS_H
+#pragma once
 
 #include "c4/substr_fwd.hpp"
 #include "c4/yml/node.hpp"
@@ -175,5 +174,3 @@ private:
         }
     }
 };
-
-#endif

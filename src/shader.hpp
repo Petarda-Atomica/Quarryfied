@@ -1,5 +1,4 @@
-#ifndef SHADER_H
-#define SHADER_H
+#pragma once
 
 #include <glbinding/glbinding.h>
 #include "glbinding/gl/enum.h"
@@ -122,4 +121,3 @@ private:
         }
     }
 };
-#endif

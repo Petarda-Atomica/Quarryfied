@@ -1,5 +1,4 @@
-#ifndef CAMERA_H
-#define CAMERA_H
+#pragma once
 
 #ifndef CAMERA_FLAGS
 #define CAMERA_FLAGS GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT
@@ -202,5 +201,3 @@ private:
         matProjection = glm::perspective(fov, viewportSize.x / viewportSize.y, 0.1f, 100.0f);
     }
 };
-
-#endif

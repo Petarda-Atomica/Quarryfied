@@ -30,7 +30,7 @@
 using namespace gl;
 
 // Function for handling OpenGL errors
-#ifndef NDEBUG
+DEBUG (
 void glErrCallback(GLenum source, GLenum type, GLuint id,
                     GLenum severity, GLsizei length,
                     const GLchar* message, const void* userParam) {
@@ -52,7 +52,7 @@ void glErrCallback(GLenum source, GLenum type, GLuint id,
     }
 
 }
-#endif
+);
 
 void windowResizeCallback(int new_width, int new_height, Camera* cam) {
     // Make sure the window isn't minimized or bugged
@@ -80,9 +80,9 @@ int main(int argc, char* argv[]) {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
     // SDL3 debugging
-    #ifndef NDEBUG
+    DEBUG(
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
-    #endif
+    );
 
     // Make window
     spdlog::info("Creating window...");
@@ -96,11 +96,11 @@ int main(int argc, char* argv[]) {
     }, false);
 
     // OpenGL debugging
-    #ifndef NDEBUG
+    DEBUG (
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(glErrCallback, nullptr);
-    #endif
+    );
 
     // OpenGL settings
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

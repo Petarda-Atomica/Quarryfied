@@ -63,3 +63,11 @@ SOURCE_GROUP(TREE
   ${SRC_FILES}
   ${HDR_FILES}
 )
+
+# Debugging macros
+SET(MACRO_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/src/globalMacros.hpp")
+IF(MSVC)
+  target_compile_options(${PROJECT_NAME} PRIVATE "/FI${MACRO_HEADER}")
+ELSE()
+  target_compile_options(${PROJECT_NAME} PRIVATE "-include" "${MACRO_HEADER}")
+ENDIF()

@@ -1,5 +1,4 @@
-#ifndef MATERIAL_H
-#define MATERIAL_H
+#pragma once
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -198,5 +197,3 @@ private:
         return handle;
     }
 };
-
-#endif
