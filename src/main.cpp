@@ -24,6 +24,7 @@
 #include "camera.hpp"
 #include "materials.hpp"
 #include "blocks.hpp"
+#include "chunk.hpp"
 #include "structs.hpp"
 
 
@@ -108,6 +109,8 @@ int main(int argc, char* argv[]) {
     // Load shaders
     Shader mainShader("assets/shaders/vertex.glsl", "assets/shaders/fragment.glsl");
     mainShader.use();
+
+    ChunkManager<16, 32> ch;
 
     // Dummy verticies1
     std::vector<CubeFace>seeds;

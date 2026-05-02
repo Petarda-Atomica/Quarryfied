@@ -3,8 +3,8 @@
 #include <c4/substr_fwd.hpp>
 #include <c4/yml/node.hpp>
 #include "materials.hpp"
+#include <cstdint>
 #include <ios>
-#include <memory>
 #include <string>
 #include <sys/types.h>
 #include <unordered_map>
@@ -99,14 +99,14 @@ public:
         // Iterate over blocks
         auto root = yamlTree.rootref();
         for (ryml::NodeRef child : root.children()) {
-            std::unique_ptr<Block> thisBlock = std::make_unique<Block>();
+            Block thisBlock;
             std::string blockName(child.key().data(), child.key().size());
 
             // Check for inheritance
             if (child.has_child("inherit")) {
                 std::string nameInherit(child["inherit"].val().data(), child["inherit"].val().size());
                 if (blockRegistry.contains(nameInherit)) {
-                    *thisBlock = *blockRegistry[nameInherit];
+                    thisBlock = blockList[blockRegistry[nameInherit]];
                 }
             }
 
@@ -114,7 +114,7 @@ public:
             if (child.has_child("visuals")) {
                 // Check for textures
                 if (child["visuals"].has_child("texture"))
-                    loadTexturesFromYAMLChild(child["visuals"]["texture"], thisBlock.get(), blocksFolder);
+                    loadTexturesFromYAMLChild(child["visuals"]["texture"], &thisBlock, blocksFolder);
             }
 
             // Check for physics properties
@@ -124,28 +124,30 @@ public:
                 auto flammable = child["physics"]["flammable"];
                 auto friction = child["physics"]["friction"];
 
-                if (!gravity.invalid()) gravity >> thisBlock->physics.affectedByGravity;
-                if (!solid.invalid()) solid >> thisBlock->physics.solid;
-                if (!flammable.invalid()) flammable >> thisBlock->physics.flammable;
-                if (!friction.invalid()) friction >> thisBlock->physics.friction;
+                if (!gravity.invalid()) gravity >> thisBlock.physics.affectedByGravity;
+                if (!solid.invalid()) solid >> thisBlock.physics.solid;
+                if (!flammable.invalid()) flammable >> thisBlock.physics.flammable;
+                if (!friction.invalid()) friction >> thisBlock.physics.friction;
             }
 
             // Check for tags
             if (child.has_child("metadata") && child["metadata"].has_child("tags")) {
                 ryml::NodeRef tagsNode = child["metadata"]["tags"];
-                thisBlock->tags.reserve(tagsNode.num_children());
+                thisBlock.tags.reserve(tagsNode.num_children());
                 for (auto const& child : tagsNode.children()) {
-                    thisBlock->tags.emplace_back(child.val().data(), child.val().size());
+                    thisBlock.tags.emplace_back(child.val().data(), child.val().size());
                 }
             }
 
             // Add to the block registry
-            blockRegistry[blockName] = std::move(thisBlock);
+            blockList.push_back(thisBlock);
+            blockRegistry[blockName] = blockList.size() - 1;
         }
     }
 
 private:
-    std::unordered_map<std::string, std::unique_ptr<Block>> blockRegistry;
+    std::vector<Block> blockList;
+    std::unordered_map<std::string, uint16_t> blockRegistry;
     MaterialManager* thisMaterialManager;
 
     //! Written by Gemini

@@ -15,7 +15,11 @@ ADD_EXECUTABLE(${PROJECT_NAME} ${SRC_FILES} ${HDR_FILES})
 
 # Include local external libraries
 FILE(GLOB EXTERN_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "extern/*")
-TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/extern)
+TARGET_INCLUDE_DIRECTORIES(
+  ${PROJECT_NAME}
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/extern
+)
 foreach(DIR ${EXTERN_DIRS})
   if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${DIR} AND
     EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${DIR}/CMakeLists.txt)
@@ -36,10 +40,14 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME}
     spdlog::spdlog
     lua_lib
     ryml::ryml
+    unordered_dense
 )
 
 # Include LuaBridge3
-TARGET_INCLUDE_DIRECTORIES(${PROJECT_NAME} PRIVATE ${luabridge_SOURCE_DIR}/Source)
+TARGET_INCLUDE_DIRECTORIES(
+  ${PROJECT_NAME} PRIVATE
+  ${luabridge_SOURCE_DIR}/Source
+)
 
 # Copy the assets folder to the build directory
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

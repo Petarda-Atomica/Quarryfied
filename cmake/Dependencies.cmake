@@ -63,3 +63,12 @@ FetchContent_Declare(
 )
 MESSAGE(STATUS "Configuring remote external dependency: ryml")
 FetchContent_MakeAvailable(ryml)
+
+# --- Ankerl (hashmaps) ---
+FetchContent_Declare(
+unordered_dense
+  GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
+  GIT_TAG        main
+)
+MESSAGE(STATUS "Configuring remote external dependency: ankerl")
+FetchContent_MakeAvailable(unordered_dense)
