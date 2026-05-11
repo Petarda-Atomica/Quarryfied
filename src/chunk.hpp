@@ -8,7 +8,6 @@
 #include <array>
 #include <bit>
 #include <bitset>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <ankerl/unordered_dense.h>
