@@ -78,6 +78,10 @@ public:
 
     BlocksManager(MaterialManager* MaterialManager) : thisMaterialManager(MaterialManager){}
 
+    auto getTextures(uint16_t blockID) {
+        return blockList[blockID-1].textures;
+    }
+
     /*
      * @brief Loads in all the blocks from the provided mod
      */

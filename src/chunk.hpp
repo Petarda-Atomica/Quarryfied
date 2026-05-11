@@ -1,9 +1,14 @@
 #pragma once
 
+#include "blocks.hpp"
+#include "glbinding/gl/bitfield.h"
+#include "glbinding/gl/types.h"
 #include "spdlog/spdlog.h"
+#include <algorithm>
 #include <array>
 #include <bit>
 #include <bitset>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <ankerl/unordered_dense.h>
@@ -11,10 +16,18 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 template<size_t CHUNK_SIZE, size_t REGION_SIZE>
 class ChunkManager {
 public:
+    BlocksManager* blocksManager;
+    ChunkManager (BlocksManager* blocksManager) : blocksManager(blocksManager) {
+        glCreateBuffers(1, &MDIcmdsSSBO);
+        glGenBuffers(1, &seedsSSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, seedsSSBO);
+    }
+
     #pragma pack(push, 1)
     template<size_t SIZE>
     struct ConstrainedVec3 {
@@ -66,6 +79,11 @@ public:
             x(static_cast<StorageType>(x)),
             y(static_cast<StorageType>(y)),
             z(static_cast<StorageType>(z)) {}
+
+        // --- Operators ---
+        bool operator==(const ConstrainedVec3& other) const {
+            return x == other.x && y == other.y && z == other.z;
+        }
     };
     #pragma pack(pop)
 
@@ -95,29 +113,37 @@ public:
         if (knownNeighbour) {
             switch (knownNeighbour) {
             case 1:
-                return {rawLocalRegion[regionCoord.flatten()].blockArray[chunkCoord.flatten()], 1};
+                return {rawLocalRegion[regionCoord].blockArray[chunkCoord.flatten()], 1};
                 break;
             case 2: {
-                auto& chunk = palletedLocalRegion[regionCoord.flatten()];
+                auto& chunk = palletedLocalRegion[regionCoord];
                 auto blockID = chunk.blockArray[chunkCoord.flatten()];
                 return {chunk.pallete[blockID], 2};
             }
             case 3: {
-                auto& chunk = sparseLocalRegion[regionCoord.flatten()];
-                for (auto& refrence : chunk) {
-                    if (refrence.coordinates.contains(chunkCoord))
-                        return {refrence.coordinates[chunkCoord], 3};
+                auto& chunk = sparseLocalRegion[regionCoord];
+                for (auto& encoding : chunk.blockArray) {
+                    auto it = std::find(
+                      encoding.coordinates.begin(),
+                      encoding.coordinates.end(),
+                      chunkCoord
+                    );
+
+                    if (it != encoding.coordinates.end())
+                        return { encoding.blockID, 3 };
                 }
             }
             }
         } else {
-            if (rawLocalRegion.contains(regionCoord.flatten()))
-                return rawLocalRegion[regionCoord.flatten()].blockArray[chunkCoord.flatten()];
-            else if (palletedLocalRegion.contains(regionCoord.flatten()))
+            if (rawLocalRegion.contains(regionCoord))
+                return {rawLocalRegion[regionCoord].blockArray[chunkCoord.flatten()], 1};
+            else if (palletedLocalRegion.contains(regionCoord))
                 return getChunkBlock(regionCoord, chunkCoord, 2);
-            else if (sparseLocalRegion.contains(regionCoord.flatten()))
+            else if (sparseLocalRegion.contains(regionCoord))
                 return getChunkBlock(regionCoord, chunkCoord, 3);
         }
+
+        return { 0, 0 };
     }
 
     std::pair<uint16_t, uint8_t> getBlock(ConstrainedVec3<CHUNK_SIZE * REGION_SIZE> coords, uint8_t knownNeighbour = 0) {
@@ -126,7 +152,54 @@ public:
 
         return getChunkBlock(regionCoord, chunkCoord, knownNeighbour);
     }
+
+    void setBlock(ConstrainedVec3<CHUNK_SIZE * REGION_SIZE> coords, uint16_t blockID) {
+        auto regionCoord = ConstrainedVec3<REGION_SIZE>(coords.x / CHUNK_SIZE, coords.y / CHUNK_SIZE, coords.z / CHUNK_SIZE);
+        auto chunkCoord = ConstrainedVec3<CHUNK_SIZE>(coords.x % CHUNK_SIZE, coords.y % CHUNK_SIZE, coords.z % CHUNK_SIZE);
+
+        if (rawLocalRegion.contains(regionCoord)) rawLocalRegion[regionCoord].setBlock(chunkCoord, blockID);
+        else if (palletedLocalRegion.contains(regionCoord)) palletedLocalRegion[regionCoord].setBlock(chunkCoord, blockID);
+        else if (sparseLocalRegion.contains(regionCoord)) sparseLocalRegion[regionCoord].setBlock(chunkCoord, blockID);
+        else {
+            sparseLocalRegion[regionCoord] = {};
+            sparseLocalRegion[regionCoord].setBlock(chunkCoord, blockID);
+        }
+    }
+
+    // TEMP CODE!!!
+    int renderChunk(ConstrainedVec3<REGION_SIZE> coord) {
+        std::vector<GPUCubeFace> faces;
+        std::vector<GPUDrawArraysIndirectCommand> cmds;
+        meshChunk(faces, cmds, coord);
+
+        // TEMP CODE!!! - load seeds
+        glBufferData(GL_SHADER_STORAGE_BUFFER, faces.size() * sizeof(GPUCubeFace), faces.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, seedsSSBO);
+
+        // TEMP CODE!!! - load MDI data
+        glNamedBufferStorage(MDIcmdsSSBO, cmds.size() * sizeof(GPUDrawArraysIndirectCommand), cmds.data(), GL_DYNAMIC_STORAGE_BIT);
+
+        return cmds.size();
+    }
+
+    void draw(GLsizei drawingSize) {
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, MDIcmdsSSBO);
+        glMultiDrawArraysIndirect(
+            GL_TRIANGLE_STRIP,
+            (void*)0,
+            drawingSize,
+            0
+        );
+    }
+
 private:
+    // --- Enums ---
+    enum class setBlockStatus {
+        Ok = 0,
+        NothingToDo = 1,
+        NeedsPromotion = 2,
+    };
+
     // --- CPU structs ---
     // Chunk coordinate - heavily optimized for RAM usage
 
@@ -134,13 +207,18 @@ private:
     template<size_t SIZE>
     struct RawChunk {
         std::array<uint16_t, SIZE * SIZE * SIZE> blockArray;
+
+        setBlockStatus setBlock(ConstrainedVec3<CHUNK_SIZE> coords, uint16_t blockID) {
+            blockArray[coords.flatten()] = blockID;
+            return setBlockStatus::Ok; // Everything is all right
+        }
     };
 
-    // PalletedChunk - optimized with a pallete, but can only hold 254 unique blocks
+    // PalletedChunk - optimized with a pallete, but can only hold 255 unique blocks
     template<size_t SIZE>
     struct PalletedChunk {
-        std::array<uint16_t, 256> pallete;
-        std::array<uint8_t, SIZE * SIZE * SIZE> blockArray;
+        std::array<uint16_t, 255> pallete{};
+        std::array<uint8_t, SIZE * SIZE * SIZE> blockArray{};
 
         std::unique_ptr<RawChunk<SIZE>> toRaw() {
             std::unique_ptr<RawChunk<SIZE>> output(new RawChunk<SIZE>);
@@ -150,20 +228,51 @@ private:
             }
             return output;
         }
+
+        inline uint8_t getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE> chunkCoord) {
+            return blockArray[chunkCoord.flatten()];
+        }
+
+        inline uint16_t getBlockAt(ConstrainedVec3<CHUNK_SIZE> chunkCoord) {
+            return pallete[this->getPalletedBlockAt(chunkCoord)];
+        }
+
+        setBlockStatus setBlock(ConstrainedVec3<CHUNK_SIZE> coords, uint16_t blockID) {
+            if (blockID == 0) {
+                blockArray[coords.flatten()] = 0;
+                return setBlockStatus::Ok;
+            }
+            for (int i = 1; i <= 255; ++i) {
+                if (pallete[i] == blockID) {
+                    blockArray[coords.flatten()] = static_cast<uint8_t>(i);
+                    return setBlockStatus::Ok;
+                }
+
+                if (pallete[i] == 0) {
+                    pallete[i] = blockID;
+                    blockArray[coords.flatten()] = static_cast<uint8_t>(i);
+                    return setBlockStatus::Ok;
+                }
+            }
+
+            return setBlockStatus::NeedsPromotion; // Requires promotion
+        }
     };
 
     // SparseChunk - heavily optimized, but only for chunks with a low block count
     template<size_t SIZE>
     struct SparseChunk {
         struct sparseEncoding {
-            uint16_t blockID;
-            std::vector<ConstrainedVec3<SIZE>> coordinates;
+            uint16_t blockID=0;
+            std::vector<ConstrainedVec3<SIZE>> coordinates{};
         };
 
-        std::vector<sparseEncoding> blockArray;
+        std::vector<sparseEncoding> blockArray{};
 
         std::unique_ptr<PalletedChunk<SIZE>> toPalleted() {
-            std::unique_ptr<PalletedChunk<SIZE>> output(new PalletedChunk<SIZE>);
+            auto output = std::make_unique<PalletedChunk<SIZE>>();
+            output->pallete[0] = 0;
+
             for (size_t index = 1; auto& value : blockArray) {
                 output->pallete[index] = value.blockID;
                 for (auto& value2 : value.coordinates) {
@@ -171,6 +280,37 @@ private:
                 }
                 ++index;
             }
+            return output;
+        }
+
+        setBlockStatus setBlock(ConstrainedVec3<CHUNK_SIZE> coords, uint16_t blockID) {
+            bool setSuccess = false;
+            for (auto& encoding : blockArray) {
+                if (encoding.blockID == blockID) {
+                    // Make sure we don't already have this block set
+                    auto it = std::find(encoding.coordinates.begin(), encoding.coordinates.end(), coords);
+                    if (it != encoding.coordinates.end()) {
+                        return setBlockStatus::NothingToDo;
+                    }
+                    // Set the block
+                    encoding.coordinates.push_back(coords);
+                    setSuccess = true;
+                } else {
+                    // Delete if we find another block at this position
+                    auto it = std::find(encoding.coordinates.begin(), encoding.coordinates.end(), coords);
+                    if (it != encoding.coordinates.end()) {
+                        encoding.coordinates.erase(it);
+                    }
+                }
+            }
+            if (!setSuccess) {
+                sparseEncoding temp;
+                temp.blockID = blockID;
+                temp.coordinates.emplace_back(coords);
+                blockArray.emplace_back(temp);
+            }
+
+            return setBlockStatus::Ok;
         }
     };
 
@@ -190,6 +330,9 @@ private:
         uint32_t first;         // Starting vertex
         uint32_t baseInstance;  // Material ID
     };
+
+    GLuint MDIcmdsSSBO;
+    GLuint seedsSSBO;
 
     // --- Variables ---
     ankerl::unordered_dense::map<
@@ -212,85 +355,145 @@ private:
     > sparseLocalRegion;
 
     // --- Meshing functions ---
-    void meshChunk(std::vector<GPUCubeFace>& faces, std::vector<GPUDrawArraysIndirectCommand>& cmd, ConstrainedVec3<REGION_SIZE> chunkCoord) {
+    void meshChunk(std::vector<GPUCubeFace>& faces, std::vector<GPUDrawArraysIndirectCommand>& cmds, ConstrainedVec3<REGION_SIZE> regionCoord) {
         // Delete old data
-        faces.empty();
-        cmd.empty();
+        faces.clear();
+        cmds.clear();
 
         // Stuff for finding neighbours
+        // TODO: Implement a use for this
         typedef uint8_t mapHint;
         std::array<mapHint, 6> neighbourHints; // 1: top // 2: bottom // 3: north // 4: east // 5: south // 6: west
 
         // Get a copy of the chunk we are working on
         bool sparseChunk = false;
-        PalletedChunk<CHUNK_SIZE> workingChunk;
-        if (sparseLocalRegion.contains(chunkCoord)) {
-            auto temp = sparseLocalRegion[chunkCoord].toPalleted();
-            workingChunk = *temp;
+        std::unique_ptr<PalletedChunk<CHUNK_SIZE>> tempStorage;
+        PalletedChunk<CHUNK_SIZE>* workingChunkPtr = nullptr;
+        if (sparseLocalRegion.contains(regionCoord)) {
+            tempStorage = sparseLocalRegion[regionCoord].toPalleted();
+            workingChunkPtr = tempStorage.get();
+            sparseChunk = true;
         }
-        if (palletedLocalRegion.contains(chunkCoord) || sparseChunk) {
+        if (palletedLocalRegion.contains(regionCoord) || sparseChunk) {
             if (!sparseChunk)
-                workingChunk = palletedLocalRegion[chunkCoord];
+                workingChunkPtr = &palletedLocalRegion[regionCoord];
 
             // Loop through the array
+            ankerl::unordered_dense::map<uint16_t, std::vector<GPUCubeFace>> drawMap;
             for (int x = 0; x < CHUNK_SIZE; x++) {
                 for (int y = 0; y < CHUNK_SIZE; y++) {
                     for (int z = 0; z < CHUNK_SIZE; z++) {
-                        std::bitset<6> existentialMatrix;
 
+                        // Get the textures of the block we are working with
+                        auto blockID =  workingChunkPtr->getBlockAt(ConstrainedVec3<CHUNK_SIZE>(x, y, z));
+                        // if air, stop
+                        if (blockID == 0) continue;
+                        auto textures = blocksManager->getTextures(blockID);
+
+                        std::bitset<6> existentialMatrix;
                         // Check top face
-                        if (z + 1 < CHUNK_SIZE)
-                            existentialMatrix[0] = static_cast<bool>(workingChunk[ConstrainedVec3<CHUNK_SIZE>(x, y, z + 1).flatten()]);
+                        if (z + 1 < CHUNK_SIZE) {
+                            existentialMatrix[0] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x, y, z + 1)) );}
                         else {
-                            existentialMatrix[0] = static_cast<bool>(getChunkBlock(ConstrainedVec3<CHUNK_SIZE>(chunkCoord.x, chunkCoord.y, chunkCoord.z + 1), ConstrainedVec3<CHUNK_SIZE>(x, y, 0)));
+                            existentialMatrix[0] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x, regionCoord.y, regionCoord.z + 1), ConstrainedVec3<CHUNK_SIZE>(x, y, 0)).first);
                         }
 
                         // Check bottom face
                         if (z - 1 >= 0)
-                            existentialMatrix[1] = static_cast<bool>(workingChunk[ConstrainedVec3<CHUNK_SIZE>(x, y, z - 1).flatten()]);
+                            existentialMatrix[1] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x, y, z - 1)) );
                         else {
-                            existentialMatrix[1] = static_cast<bool>(getChunkBlock(ConstrainedVec3<CHUNK_SIZE>(chunkCoord.x, chunkCoord.y, chunkCoord.z - 1), ConstrainedVec3<CHUNK_SIZE>(x, y, CHUNK_SIZE - 1)));
+                            existentialMatrix[1] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x, regionCoord.y, regionCoord.z - 1), ConstrainedVec3<CHUNK_SIZE>(x, y, CHUNK_SIZE - 1)).first);
                         }
 
                         // Check north face
                         if (x + 1 < CHUNK_SIZE)
-                            existentialMatrix[2] = static_cast<bool>(workingChunk[ConstrainedVec3<CHUNK_SIZE>(x + 1, y, z).flatten()]);
+                            existentialMatrix[2] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x + 1, y, z)) );
                         else {
-                            existentialMatrix[2] = static_cast<bool>(getChunkBlock(ConstrainedVec3<CHUNK_SIZE>(chunkCoord.x + 1, chunkCoord.y, chunkCoord.z), ConstrainedVec3<CHUNK_SIZE>(0, y, z)));
+                            existentialMatrix[2] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x + 1, regionCoord.y, regionCoord.z), ConstrainedVec3<CHUNK_SIZE>(0, y, z)).first);
                         }
 
                         // Check south face
                         if (x - 1 >= 0)
-                            existentialMatrix[4] = static_cast<bool>(workingChunk[ConstrainedVec3<CHUNK_SIZE>(x - 1, y, z).flatten()]);
+                            existentialMatrix[4] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x - 1, y, z)) );
                         else {
-                            existentialMatrix[4] = static_cast<bool>(getChunkBlock(ConstrainedVec3<CHUNK_SIZE>(chunkCoord.x - 1, chunkCoord.y, chunkCoord.z), ConstrainedVec3<CHUNK_SIZE>(CHUNK_SIZE - 1, y, z)));
+                            existentialMatrix[4] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x - 1, regionCoord.y, regionCoord.z), ConstrainedVec3<CHUNK_SIZE>(CHUNK_SIZE - 1, y, z)).first);
                         }
 
                         // Check east face
                         if (y + 1 < CHUNK_SIZE)
-                            existentialMatrix[3] = static_cast<bool>(workingChunk[ConstrainedVec3<CHUNK_SIZE>(x, y + 1, z).flatten()]);
+                            existentialMatrix[3] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x, y + 1, z)) );
                         else {
-                            existentialMatrix[3] = static_cast<bool>(getChunkBlock(ConstrainedVec3<CHUNK_SIZE>(chunkCoord.x, chunkCoord.y + 1, chunkCoord.z), ConstrainedVec3<CHUNK_SIZE>(x, 0, z)));
+                            existentialMatrix[3] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x, regionCoord.y + 1, regionCoord.z), ConstrainedVec3<CHUNK_SIZE>(x, 0, z)).first);
                         }
 
                         // Check west face
                         if (y - 1 >= 0)
-                            existentialMatrix[5] = static_cast<bool>(workingChunk[ConstrainedVec3<CHUNK_SIZE>(x, y - 1, z).flatten()]);
+                            existentialMatrix[5] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x, y - 1, z)) );
                         else {
-                            existentialMatrix[5] = static_cast<bool>(getChunkBlock(ConstrainedVec3<CHUNK_SIZE>(chunkCoord.x, chunkCoord.y - 1, chunkCoord.z), ConstrainedVec3<CHUNK_SIZE>(x, CHUNK_SIZE - 1, z)));
+                            existentialMatrix[5] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x, regionCoord.y - 1, regionCoord.z), ConstrainedVec3<CHUNK_SIZE>(x, CHUNK_SIZE - 1, z)).first);
+                        }
+
+                        // Actual meshing
+                        GPUCubeFace face;
+                        face.x = regionCoord.x * CHUNK_SIZE + x;
+                        face.y = regionCoord.y * CHUNK_SIZE + y;
+                        face.z = regionCoord.z * CHUNK_SIZE + z;
+                        if (existentialMatrix[0]) {
+                            face.setOrientation(3, 0, 0);
+                            drawMap[textures.top].emplace_back(face);
+                        }
+                        if (existentialMatrix[1]) {
+                            face.setOrientation(1, 0, 0);
+                            drawMap[textures.bottom].emplace_back(face);
+                        }
+                        if (existentialMatrix[2]) {
+                            face.setOrientation(2, 0, 0);
+                            drawMap[textures.north].emplace_back(face);
+                        }
+                        if (existentialMatrix[3]) {
+                            face.setOrientation(0, 1, 0);
+                            drawMap[textures.east].emplace_back(face);
+                        }
+                        if (existentialMatrix[4]) {
+                            face.setOrientation(0, 0, 0);
+                            drawMap[textures.south].emplace_back(face);
+                        }
+                        if (existentialMatrix[5]) {
+                            face.setOrientation(0, 3, 0);
+                            drawMap[textures.west].emplace_back(face);
                         }
                     }
                 }
             }
 
-        } else if (rawLocalRegion.contains(chunkCoord)) {
+            // Pack into draw calls
+            uint32_t vertexID = 0;
+            for (auto& [key, val] : drawMap) {
+                // Build MID call
+                GPUDrawArraysIndirectCommand cmd;
+                cmd.count = val.size() * 4;
+                cmd.instanceCount = val.size();
+                cmd.first = vertexID;
+                cmd.baseInstance = key;
+                vertexID += cmd.instanceCount-1;
+                cmds.emplace_back(cmd);
+
+                // Merge seeds
+                faces.insert(faces.end(), std::make_move_iterator(val.begin()), std::make_move_iterator(val.end()));
+            }
+
+        } else if (rawLocalRegion.contains(regionCoord)) {
             spdlog::warn("Raw chunk meshing not implemented");
         } else {
-            DEBUG( spdlog::warn("Tried to mesh missing chunk at X: {}; Y:{}; Z:{}", chunkCoord.x, chunkCoord.y, chunkCoord.z) );
+            DEBUG( spdlog::warn("Tried to mesh missing chunk at X: {}; Y:{}; Z:{}",
+                static_cast<uint16_t>(regionCoord.x),
+                static_cast<uint16_t>(regionCoord.y),
+                static_cast<uint16_t>(regionCoord.z))
+            );
         }
 
         // Shrink, just in case
         faces.shrink_to_fit();
-        cmd.shrink_to_fit();
+        cmds.shrink_to_fit();
     }
 };

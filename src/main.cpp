@@ -13,7 +13,6 @@
 #include <glbinding/glbinding.h>
 #include <glbinding/gl/gl.h>
 #include <glbinding/Binding.h>
-#include <vector>
 #include "SDL3/SDL_video.h"
 #include "glbinding/gl/enum.h"
 #include "glbinding/gl/functions.h"
@@ -25,7 +24,6 @@
 #include "materials.hpp"
 #include "blocks.hpp"
 #include "chunk.hpp"
-#include "structs.hpp"
 
 
 using namespace gl;
@@ -105,83 +103,33 @@ int main(int argc, char* argv[]) {
 
     // OpenGL settings
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glEnable(GL_DEPTH_TEST);
 
     // Load shaders
     Shader mainShader("assets/shaders/vertex.glsl", "assets/shaders/fragment.glsl");
     mainShader.use();
 
-    ChunkManager<16, 32> ch;
-
-    // Dummy verticies1
-    std::vector<CubeFace>seeds;
-    CubeFace myFace;
-    myFace.orientation = packCubeFaceOrientation(0, 0, 0);
-    myFace.x = -0.5f;
-    myFace.y = -0.5f;
-    myFace.z = 0.0f;
-    seeds.push_back(myFace);
-
-    // Dummy verticies2
-    myFace.orientation = packCubeFaceOrientation(0, 0, 0);
-    myFace.x = 0.5f;
-    myFace.y = -0.5f;
-    myFace.z = 0.0f;
-    seeds.push_back(myFace);
-
-    // Dummy verticies3
-    myFace.orientation = packCubeFaceOrientation(0, 0, 0);
-    myFace.x = -0.5f;
-    myFace.y = 0.5f;
-    myFace.z = 0.0f;
-    seeds.push_back(myFace);
-
-    // Dummy verticies4
-    myFace.orientation = packCubeFaceOrientation(0, 0, 0);
-    myFace.x = 0.5f;
-    myFace.y = 0.5f;
-    myFace.z = 0.0f;
-    seeds.push_back(myFace);
-
-    // Create new Material Manager, upload data to it and bind it
-    MaterialManager materials;
-    materials.newMaterial("assets/textures/grass.png");
-    materials.bufferData();
-    materials.bind(1);
-
-    // Dummy MDI data
-    std::vector<DrawArraysIndirectCommand>drawCommands;
-    DrawArraysIndirectCommand cmd;
-    cmd.count = 4;
-    cmd.instanceCount = 4;
-    cmd.first = 0;
-    cmd.baseInstance = 0;
-    drawCommands.push_back(cmd);
-
-    // Upload MDI data
-    GLuint cmdBuffer;
-    glCreateBuffers(1, &cmdBuffer);
-    glNamedBufferStorage(cmdBuffer, drawCommands.size() * sizeof(DrawArraysIndirectCommand), drawCommands.data(), GL_DYNAMIC_STORAGE_BIT);
-
     // Create VAO
     GLuint VAO;
     glGenVertexArrays(1, &VAO);
-
-    // Create seeds SSBO
-    GLuint seedsSSBO;
-    glGenBuffers(1, &seedsSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, seedsSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, seeds.size() * sizeof(CubeFace), seeds.data(), GL_STATIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, seedsSSBO);
 
     Camera mainCamera(
         glm::vec3(4, 3, 3),
         glm::radians(45.0f),
         glm::vec2(1280, 720)
     );
-    mainCamera.bind(2);
+
+    // Create new Material Manager, upload data to it and bind it
+    MaterialManager materials;
 
     BlocksManager aManager(&materials);
     aManager.loadBlocks("main");
+    materials.bufferData();
+
+    ChunkManager<16, 32> chunks(&aManager);
+    chunks.setBlock(ChunkManager<16, 32>::ConstrainedVec3<16*32>(0,0,0), 1);
+    chunks.setBlock(ChunkManager<16, 32>::ConstrainedVec3<16*32>(0,0,0), 2);
+    auto drawingSize = chunks.renderChunk(ChunkManager<16, 32>::ConstrainedVec3<32>(0,0,0));
 
     // Main loop
     spdlog::info("Initialization finished! Entering main loop.");
@@ -203,17 +151,15 @@ int main(int argc, char* argv[]) {
         mainCamera.update();
 
         // Clear screen
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // Bind stuff
+        mainCamera.bind(2);
+        materials.bind(1);
 
         // Really cool rendering logic
         glBindVertexArray(VAO);
-        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, cmdBuffer);
-        glMultiDrawArraysIndirect(
-            GL_TRIANGLE_STRIP,
-            (void*)0,
-            drawCommands.size(),
-            0
-        );
+        chunks.draw(drawingSize);
         // ------------------------ //
 
         // Swap

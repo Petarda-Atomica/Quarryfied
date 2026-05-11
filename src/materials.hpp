@@ -107,6 +107,12 @@ public:
             fileRegistry[texturePath] = thisMat.textureHandle;
         } else {
             thisMat.textureHandle = fileRegistry[texturePath];
+
+            // TODO: Beware, shit code incoming
+            for (size_t index=0; auto& v : Materials) {
+                if (v.textureHandle == thisMat.textureHandle) return index;
+                ++index;
+            }
         }
 
         //! Planned deprecation
