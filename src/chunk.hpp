@@ -391,74 +391,91 @@ private:
 
                         std::bitset<6> existentialMatrix;
                         // Check top face
-                        if (z + 1 < CHUNK_SIZE) {
-                            existentialMatrix[0] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x, y, z + 1)) );}
+                        if (y + 1 < CHUNK_SIZE) {
+                            existentialMatrix[0] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x, y + 1, z)) );}
                         else {
-                            existentialMatrix[0] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x, regionCoord.y, regionCoord.z + 1), ConstrainedVec3<CHUNK_SIZE>(x, y, 0)).first);
+                            existentialMatrix[0] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x, regionCoord.y + 1, regionCoord.z), ConstrainedVec3<CHUNK_SIZE>(x, 0, z)).first);
                         }
 
                         // Check bottom face
-                        if (z - 1 >= 0)
-                            existentialMatrix[1] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x, y, z - 1)) );
+                        if (y - 1 >= 0)
+                            existentialMatrix[1] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x, y - 1, z)) );
                         else {
-                            existentialMatrix[1] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x, regionCoord.y, regionCoord.z - 1), ConstrainedVec3<CHUNK_SIZE>(x, y, CHUNK_SIZE - 1)).first);
+                            existentialMatrix[1] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x, regionCoord.y - 1, regionCoord.z), ConstrainedVec3<CHUNK_SIZE>(x, CHUNK_SIZE-1, z)).first);
                         }
 
                         // Check north face
-                        if (x + 1 < CHUNK_SIZE)
-                            existentialMatrix[2] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x + 1, y, z)) );
+                        if (z + 1 < CHUNK_SIZE)
+                            existentialMatrix[2] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x, y, z + 1)) );
                         else {
-                            existentialMatrix[2] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x + 1, regionCoord.y, regionCoord.z), ConstrainedVec3<CHUNK_SIZE>(0, y, z)).first);
+                            existentialMatrix[2] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x, regionCoord.y, regionCoord.z + 1), ConstrainedVec3<CHUNK_SIZE>(x, y, 0)).first);
                         }
 
                         // Check south face
-                        if (x - 1 >= 0)
-                            existentialMatrix[4] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x - 1, y, z)) );
+                        if (z - 1 >= 0)
+                            existentialMatrix[4] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x, y, z - 1)) );
                         else {
-                            existentialMatrix[4] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x - 1, regionCoord.y, regionCoord.z), ConstrainedVec3<CHUNK_SIZE>(CHUNK_SIZE - 1, y, z)).first);
+                            existentialMatrix[4] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x, regionCoord.y, regionCoord.z - 1), ConstrainedVec3<CHUNK_SIZE>(x, y, CHUNK_SIZE - 1)).first);
                         }
 
                         // Check east face
-                        if (y + 1 < CHUNK_SIZE)
-                            existentialMatrix[3] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x, y + 1, z)) );
+                        if (x + 1 < CHUNK_SIZE)
+                            existentialMatrix[3] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x + 1, y, z)) );
                         else {
-                            existentialMatrix[3] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x, regionCoord.y + 1, regionCoord.z), ConstrainedVec3<CHUNK_SIZE>(x, 0, z)).first);
+                            existentialMatrix[3] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x + 1, regionCoord.y, regionCoord.z), ConstrainedVec3<CHUNK_SIZE>(0, y, z)).first);
                         }
 
                         // Check west face
-                        if (y - 1 >= 0)
-                            existentialMatrix[5] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x, y - 1, z)) );
+                        if (x - 1 >= 0)
+                            existentialMatrix[5] = !static_cast<bool>( workingChunkPtr->getPalletedBlockAt(ConstrainedVec3<CHUNK_SIZE>(x - 1, y, z)) );
                         else {
-                            existentialMatrix[5] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x, regionCoord.y - 1, regionCoord.z), ConstrainedVec3<CHUNK_SIZE>(x, CHUNK_SIZE - 1, z)).first);
+                            existentialMatrix[5] = !static_cast<bool>(getChunkBlock(ConstrainedVec3<REGION_SIZE>(regionCoord.x - 1, regionCoord.y, regionCoord.z), ConstrainedVec3<CHUNK_SIZE>(CHUNK_SIZE - 1, y, z)).first);
                         }
 
                         // Actual meshing
-                        GPUCubeFace face;
-                        face.x = regionCoord.x * CHUNK_SIZE + x;
-                        face.y = regionCoord.y * CHUNK_SIZE + y;
-                        face.z = regionCoord.z * CHUNK_SIZE + z;
+                        GPUCubeFace centerFace;
+                        centerFace.x = regionCoord.x * CHUNK_SIZE + x;
+                        centerFace.y = regionCoord.y * CHUNK_SIZE + y;
+                        centerFace.z = regionCoord.z * CHUNK_SIZE + z;
                         if (existentialMatrix[0]) {
+                            GPUCubeFace face = centerFace;
                             face.setOrientation(3, 0, 0);
+                            face.y += 0.5;
                             drawMap[textures.top].emplace_back(face);
                         }
+
                         if (existentialMatrix[1]) {
+                            GPUCubeFace face = centerFace;
                             face.setOrientation(1, 0, 0);
+                            face.y -= 0.5;
                             drawMap[textures.bottom].emplace_back(face);
                         }
+
                         if (existentialMatrix[2]) {
+                            GPUCubeFace face = centerFace;
                             face.setOrientation(2, 0, 0);
+                            face.z += 0.5;
                             drawMap[textures.north].emplace_back(face);
                         }
+
                         if (existentialMatrix[3]) {
+                            GPUCubeFace face = centerFace;
                             face.setOrientation(0, 1, 0);
+                            face.x += 0.5;
                             drawMap[textures.east].emplace_back(face);
                         }
+
                         if (existentialMatrix[4]) {
+                            GPUCubeFace face = centerFace;
                             face.setOrientation(0, 0, 0);
+                            face.z -= 0.5;
                             drawMap[textures.south].emplace_back(face);
                         }
+
                         if (existentialMatrix[5]) {
+                            GPUCubeFace face = centerFace;
                             face.setOrientation(0, 3, 0);
+                            face.x -= 0.5;
                             drawMap[textures.west].emplace_back(face);
                         }
                     }
@@ -466,18 +483,17 @@ private:
             }
 
             // Pack into draw calls
-            uint32_t vertexID = 0;
-            for (auto& [key, val] : drawMap) {
-                // Build MID call
+            uint32_t instanceOffset = 0;
+            for (auto& [textureID, val] : drawMap) {
                 GPUDrawArraysIndirectCommand cmd;
-                cmd.count = val.size() * 4;
-                cmd.instanceCount = val.size();
-                cmd.first = vertexID;
-                cmd.baseInstance = key;
-                vertexID += cmd.instanceCount-1;
+                cmd.count = 4;
+                cmd.instanceCount = (uint32_t)val.size();
+                cmd.first = 0;
+                cmd.baseInstance = instanceOffset;
                 cmds.emplace_back(cmd);
 
-                // Merge seeds
+                instanceOffset += (uint32_t)val.size();
+
                 faces.insert(faces.end(), std::make_move_iterator(val.begin()), std::make_move_iterator(val.end()));
             }
 

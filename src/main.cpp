@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
 
     ChunkManager<16, 32> chunks(&aManager);
     chunks.setBlock(ChunkManager<16, 32>::ConstrainedVec3<16*32>(0,0,0), 1);
-    chunks.setBlock(ChunkManager<16, 32>::ConstrainedVec3<16*32>(0,0,0), 2);
+    chunks.setBlock(ChunkManager<16, 32>::ConstrainedVec3<16*32>(0,1,0), 2);
     auto drawingSize = chunks.renderChunk(ChunkManager<16, 32>::ConstrainedVec3<32>(0,0,0));
 
     // Main loop

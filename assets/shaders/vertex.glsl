@@ -36,7 +36,8 @@ mat3 getRotationMatrix(int steps, vec3 axis) {
 }
 
 void main() {
-    QuadSeed data = seeds[gl_InstanceID];
+    uint globalInstanceID = gl_InstanceID + gl_BaseInstance;
+    QuadSeed data = seeds[globalInstanceID];
 
     // Define the 4 corners of the quad (Triangle Strip)
     vec3 pos = vec3(0.0);
@@ -60,9 +61,12 @@ void main() {
     gl_Position = camera.viewProjection * vec4(pos + data.center, 1.0);
 
     // Send material data
-    drawID = gl_BaseInstance;
-    if (gl_VertexID == 0) uv = vec2(0.0, 0.0);
-    if (gl_VertexID == 1) uv = vec2(1.0, 0.0);
-    if (gl_VertexID == 2) uv = vec2(0.0, 1.0);
-    if (gl_VertexID == 3) uv = vec2(1.0, 1.0);
+    drawID = gl_DrawID;
+    const vec2 uvCoords[4] = vec2[](
+            vec2(0.0, 0.0),
+            vec2(1.0, 0.0),
+            vec2(0.0, 1.0),
+            vec2(1.0, 1.0)
+        );
+    uv = uvCoords[gl_VertexID];
 }
