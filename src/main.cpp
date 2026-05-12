@@ -1,9 +1,13 @@
 // Logging
 #include "SDL3/SDL_events.h"
+#include "SDL3/SDL_keyboard.h"
+#include "SDL3/SDL_mouse.h"
+#include "SDL3/SDL_scancode.h"
 #include "glbinding/gl/bitfield.h"
 #include "glm/ext/vector_float2.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "glm/trigonometric.hpp"
+#include <cmath>
 #include <spdlog/spdlog.h>
 
 // I/O management
@@ -19,11 +23,13 @@
 #include "glbinding/gl/types.h"
 
 // Utils
+#include "player.hpp"
 #include "shader.hpp"
 #include "camera.hpp"
 #include "materials.hpp"
 #include "blocks.hpp"
 #include "chunk.hpp"
+#include "timer.hpp"
 
 
 using namespace gl;
@@ -87,6 +93,7 @@ int main(int argc, char* argv[]) {
     spdlog::info("Creating window...");
     SDL_Window* window = SDL_CreateWindow("Quarryfied", 1280, 720, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     SDL_GLContext glContext = SDL_GL_CreateContext(window);
+    SDL_SetWindowRelativeMouseMode(window, true);
 
     // Init glbinding
     spdlog::info("Initializing glbinding...");
@@ -113,11 +120,11 @@ int main(int argc, char* argv[]) {
     GLuint VAO;
     glGenVertexArrays(1, &VAO);
 
-    Camera mainCamera(
-        glm::vec3(4, 3, 3),
-        glm::radians(45.0f),
-        glm::vec2(1280, 720)
-    );
+    Player<> Steve;
+    Steve.position.x = 3;
+    Steve.position.y = 0;
+    Steve.position.z = 3;
+    Steve.lookAt(glm::vec3(0,0,0));
 
     // Create new Material Manager, upload data to it and bind it
     MaterialManager materials;
@@ -137,8 +144,11 @@ int main(int argc, char* argv[]) {
     // Main loop
     spdlog::info("Initialization finished! Entering main loop.");
     glClearColor(0.45f, 0.71f, 0.95f, 1.0f);
+    HighResolutionTimer timer;
     bool running = true;
     while (running) {
+        timer.Tick();
+
         // Poll SDL events
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -147,17 +157,54 @@ int main(int argc, char* argv[]) {
                 running = false;
                 break;
             case SDL_EVENT_WINDOW_RESIZED:
-                windowResizeCallback(event.window.data1, event.window.data2, &mainCamera);
+                windowResizeCallback(event.window.data1, event.window.data2, Steve.camera.get());
+                break;
+            case SDL_EVENT_MOUSE_MOTION:
+                float dx = event.motion.xrel;
+                float dy = event.motion.yrel;
+
+                Steve.position.yaw += dx * 0.5;
+                Steve.position.pitch += dy * 0.5;
+
+                // Clamp pitch
+                if (Steve.position.pitch > +89.0f) Steve.position.pitch = +89.0f;
+                if (Steve.position.pitch < -89.0f) Steve.position.pitch = -89.0f;
                 break;
             }
         }
-        mainCamera.update();
+
+        // Poll keys used for movement
+        const bool* keys = SDL_GetKeyboardState(nullptr);
+        if (keys[SDL_SCANCODE_W]) {
+            Steve.position.x += Steve.attributes.speed * timer.DeltaTime() * sin(glm::radians(Steve.position.yaw));
+            Steve.position.z -= Steve.attributes.speed * timer.DeltaTime() * cos(glm::radians(Steve.position.yaw));
+        }
+        if (keys[SDL_SCANCODE_S]) {
+            Steve.position.x -= Steve.attributes.speed * timer.DeltaTime() * sin(glm::radians(Steve.position.yaw));
+            Steve.position.z += Steve.attributes.speed * timer.DeltaTime() * cos(glm::radians(Steve.position.yaw));
+        }
+        if (keys[SDL_SCANCODE_A]) {
+            Steve.position.x -= Steve.attributes.speed * timer.DeltaTime() * cos(glm::radians(Steve.position.yaw));
+            Steve.position.z -= Steve.attributes.speed * timer.DeltaTime() * sin(glm::radians(Steve.position.yaw));
+        }
+        if (keys[SDL_SCANCODE_D]) {
+            Steve.position.x += Steve.attributes.speed * timer.DeltaTime() * cos(glm::radians(Steve.position.yaw));
+            Steve.position.z += Steve.attributes.speed * timer.DeltaTime() * sin(glm::radians(Steve.position.yaw));
+        }
+        if (keys[SDL_SCANCODE_SPACE]) {
+            Steve.position.y += Steve.attributes.speed * timer.DeltaTime();
+        }
+        if (keys[SDL_SCANCODE_LSHIFT]) {
+            Steve.position.y -= Steve.attributes.speed * timer.DeltaTime();
+        }
+
+        Steve.syncCameras();
 
         // Clear screen
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Bind stuff
-        mainCamera.bind(2);
+        Steve.camera->bind(2);
         materials.bind(1);
 
         // Really cool rendering logic
@@ -170,7 +217,7 @@ int main(int argc, char* argv[]) {
     }
 
     spdlog::info("Doing cleanup...");
-    mainCamera.destroy();
+    Steve.destroy();
     materials.destroy();
     SDL_GL_DestroyContext(glContext);
     SDL_DestroyWindow(window);
