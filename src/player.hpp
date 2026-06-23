@@ -23,6 +23,7 @@ public:
     std::unique_ptr<Camera> camera;
 
     inline void syncCameras() {
+        // TODO: Fix angles above 360
         camera->setAngle(glm::vec3(this->position.pitch, this->position.yaw, this->position.roll));
         camera->setPos(glm::vec3(this->position.x, this->position.y + 1.75, this->position.z));
         camera->update();
