@@ -1,6 +1,6 @@
 #pragma once
 
-#include "camera.hpp"
+#include "graphics/camera.hpp"
 #include "entity.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "inventory.hpp"

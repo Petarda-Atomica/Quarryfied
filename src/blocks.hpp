@@ -2,7 +2,7 @@
 
 #include <c4/substr_fwd.hpp>
 #include <c4/yml/node.hpp>
-#include "materials.hpp"
+#include "graphics/materials.hpp"
 #include <cstdint>
 #include <ios>
 #include <string>

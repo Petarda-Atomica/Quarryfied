@@ -1,4 +1,18 @@
+// SDL
+#include <cmath>
+
 // Logging
+#include <spdlog/spdlog.h>
+
+// OpenGL
+#include <SDL3/SDL.h>
+#include <glbinding/glbinding.h>
+#include <glbinding/gl/gl.h>
+#include <glbinding/Binding.h>
+#include "SDL3/SDL_video.h"
+#include "glbinding/gl/enum.h"
+#include "glbinding/gl/functions.h"
+#include "glbinding/gl/types.h"
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keyboard.h"
 #include "SDL3/SDL_mouse.h"
@@ -7,29 +21,15 @@
 #include "glm/ext/vector_float2.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "glm/trigonometric.hpp"
-#include <cmath>
-#include <spdlog/spdlog.h>
-
-// I/O management
-#include <SDL3/SDL.h>
-
-// OpenGL
-#include <glbinding/glbinding.h>
-#include <glbinding/gl/gl.h>
-#include <glbinding/Binding.h>
-#include "SDL3/SDL_video.h"
-#include "glbinding/gl/enum.h"
-#include "glbinding/gl/functions.h"
-#include "glbinding/gl/types.h"
 
 // Utils
 #include "player.hpp"
-#include "shader.hpp"
-#include "camera.hpp"
-#include "materials.hpp"
+#include "graphics/shader.hpp"
+#include "graphics/camera.hpp"
+#include "graphics/materials.hpp"
 #include "blocks.hpp"
 #include "chunk.hpp"
-#include "timer.hpp"
+#include "core/timer.hpp"
 
 
 using namespace gl;
