@@ -14,7 +14,7 @@
 //     return output;
 // }
 
-setBlockStatus SparseChunk::setBlock(ConstrainedVec3<CHUNK_SIZE> coords, uint16_t blockID) {
+setBlockStatus SparseChunk::setBlock(chunkCoord coords, uint16_t blockID) {
     bool setSuccess = false;
     for (auto& encoding : blockArray) {
         if (encoding.blockID == blockID) {
