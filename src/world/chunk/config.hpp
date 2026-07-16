@@ -18,4 +18,4 @@ constexpr std::size_t REGION_SIZE = BASE_REGION_SIZE;
 constexpr std::size_t FLATTENED_REGION_SIZE = REGION_SIZE * REGION_SIZE * REGION_SIZE;
 
 using chunkCoord = ConstrainedVec3<CHUNK_SIZE>;
-using regionCoor = ConstrainedVec3<REGION_SIZE>;
+using regionCoord = ConstrainedVec3<REGION_SIZE>;

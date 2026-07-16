@@ -1,3 +1,5 @@
+#pragma once
+
 #include <algorithm> // IWYU pragma: keep
 #include <utils/enums.hpp>
 #include "config.hpp"
