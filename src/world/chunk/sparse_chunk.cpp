@@ -1,5 +1,4 @@
 #include "sparse_chunk.hpp"
-#include "world/chunk/palleted_chunk.hpp"
 
 setBlockStatus SparseChunk::setBlock(chunkCoord coords, uint16_t blockID) {
     bool setSuccess = false;

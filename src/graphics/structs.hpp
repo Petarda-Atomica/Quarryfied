@@ -21,12 +21,12 @@ namespace GPU {
 
         void setOrientation(cardinalDirection dir) {
             switch (dir) {
-                case cardinalDirection::North: setOrientation(0, 0, 1); break; // Z = 1
-                case cardinalDirection::East:  setOrientation(1, 0, 0); break; // X = 1
-                case cardinalDirection::South: setOrientation(0, 0, 3); break; // Z = 3
-                case cardinalDirection::West:  setOrientation(3, 0, 0); break; // X = 3
-                case cardinalDirection::Up:    setOrientation(0, 1, 0); break; // Y = 1
-                case cardinalDirection::Down:  setOrientation(0, 3, 0); break; // Y = 3
+                case cardinalDirection::North: setOrientation(2, 0, 0); break;
+                case cardinalDirection::East:  setOrientation(0, 1, 0); break;
+                case cardinalDirection::South: setOrientation(0, 0, 0); break;
+                case cardinalDirection::West:  setOrientation(0, 3, 0); break;
+                case cardinalDirection::Up:    setOrientation(3, 0, 0); break;
+                case cardinalDirection::Down:  setOrientation(1, 0, 0); break;
             }
         }
     };

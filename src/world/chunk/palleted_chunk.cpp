@@ -93,7 +93,9 @@ void PalletedChunk::mesh(std::vector<GPU::CubeFace>& faces, std::vector<GPU::Dra
         for (int y = 0; y < CHUNK_SIZE; y++) {
             for (int z = 0; z < CHUNK_SIZE; z++) {
                 // Get the textures of the block
-                auto textures = blocksManager->getTextures(pallete[blockArray[chunkCoord(x, y, z).flatten()]]);
+                auto blockID = this->getBlockAt(chunkCoord(x, y, z));
+                if (blockID == 0) continue;
+                auto textures = blocksManager->getTextures(blockID);
 
                 // Mesh north face
                 if ([this, x, y, z, neighboursFaceMask]() {
@@ -106,9 +108,9 @@ void PalletedChunk::mesh(std::vector<GPU::CubeFace>& faces, std::vector<GPU::Dra
                     return !static_cast<bool>(blockArray[chunkCoord(x, y, z-1).flatten()]);
                 }()) {
                     GPU::CubeFace face;
-                    face.x = regionCoord.x;
-                    face.y = regionCoord.y;
-                    face.z = regionCoord.z - 0.5;
+                    face.x = regionCoord.x + x;
+                    face.y = regionCoord.y + y;
+                    face.z = regionCoord.z + z - 0.5;
                     face.setOrientation(cardinalDirection::North);
                     drawMap[textures.north].emplace_back(face);
                 }
@@ -124,9 +126,9 @@ void PalletedChunk::mesh(std::vector<GPU::CubeFace>& faces, std::vector<GPU::Dra
                     return !static_cast<bool>(blockArray[chunkCoord(x+1, y, z).flatten()]);
                 }()) {
                     GPU::CubeFace face;
-                    face.x = regionCoord.x + 0.5;
-                    face.y = regionCoord.y;
-                    face.z = regionCoord.z;
+                    face.x = regionCoord.x + x + 0.5;
+                    face.y = regionCoord.y + y;
+                    face.z = regionCoord.z + z;
                     face.setOrientation(cardinalDirection::East);
                     drawMap[textures.east].emplace_back(face);
                 }
@@ -142,9 +144,9 @@ void PalletedChunk::mesh(std::vector<GPU::CubeFace>& faces, std::vector<GPU::Dra
                     return !static_cast<bool>(blockArray[chunkCoord(x, y, z+1).flatten()]);
                 }()) {
                     GPU::CubeFace face;
-                    face.x = regionCoord.x;
-                    face.y = regionCoord.y;
-                    face.z = regionCoord.z + 0.5;
+                    face.x = regionCoord.x + x;
+                    face.y = regionCoord.y + y;
+                    face.z = regionCoord.z + z + 0.5;
                     face.setOrientation(cardinalDirection::South);
                     drawMap[textures.south].emplace_back(face);
                 }
@@ -160,9 +162,9 @@ void PalletedChunk::mesh(std::vector<GPU::CubeFace>& faces, std::vector<GPU::Dra
                     return !static_cast<bool>(blockArray[chunkCoord(x-1, y, z).flatten()]);
                 }()) {
                     GPU::CubeFace face;
-                    face.x = regionCoord.x - 0.5;
-                    face.y = regionCoord.y;
-                    face.z = regionCoord.z;
+                    face.x = regionCoord.x + x - 0.5;
+                    face.y = regionCoord.y + y;
+                    face.z = regionCoord.z + z;
                     face.setOrientation(cardinalDirection::West);
                     drawMap[textures.west].emplace_back(face);
                 }
@@ -178,9 +180,9 @@ void PalletedChunk::mesh(std::vector<GPU::CubeFace>& faces, std::vector<GPU::Dra
                     return !static_cast<bool>(blockArray[chunkCoord(x, y+1, z).flatten()]);
                 }()) {
                     GPU::CubeFace face;
-                    face.x = regionCoord.x;
-                    face.y = regionCoord.y + 0.5;
-                    face.z = regionCoord.z;
+                    face.x = regionCoord.x + x;
+                    face.y = regionCoord.y + y + 0.5;
+                    face.z = regionCoord.z + z;
                     face.setOrientation(cardinalDirection::Up);
                     drawMap[textures.top].emplace_back(face);
                 }
@@ -196,9 +198,9 @@ void PalletedChunk::mesh(std::vector<GPU::CubeFace>& faces, std::vector<GPU::Dra
                     return !static_cast<bool>(blockArray[chunkCoord(x, y-1, z).flatten()]);
                 }()) {
                     GPU::CubeFace face;
-                    face.x = regionCoord.x;
-                    face.y = regionCoord.y - 0.5;
-                    face.z = regionCoord.z;
+                    face.x = regionCoord.x + x;
+                    face.y = regionCoord.y + y - 0.5;
+                    face.z = regionCoord.z + z;
                     face.setOrientation(cardinalDirection::Down);
                     drawMap[textures.bottom].emplace_back(face);
                 }

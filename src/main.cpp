@@ -28,8 +28,9 @@
 #include "graphics/camera.hpp"
 #include "graphics/materials.hpp"
 #include "blocks.hpp"
-#include "chunk.hpp"
 #include "core/timer.hpp"
+#include "world/chunk/config.hpp"
+#include "world/region.hpp"
 
 
 using namespace gl;
@@ -133,13 +134,14 @@ int main(int argc, char* argv[]) {
     aManager.loadBlocks("main");
     materials.bufferData();
 
-    ChunkManager<16, 32> chunks(&aManager);
-    chunks.setBlock(ChunkManager<16, 32>::ConstrainedVec3<16*32>(0,0,0), 1);
-    chunks.setBlock(ChunkManager<16, 32>::ConstrainedVec3<16*32>(1,0,0), 1);
-    chunks.setBlock(ChunkManager<16, 32>::ConstrainedVec3<16*32>(0,0,1), 1);
-    chunks.setBlock(ChunkManager<16, 32>::ConstrainedVec3<16*32>(1,0,1), 1);
-    chunks.setBlock(ChunkManager<16, 32>::ConstrainedVec3<16*32>(0,1,0), 1);
-    auto drawingSize = chunks.renderChunk(ChunkManager<16, 32>::ConstrainedVec3<32>(0,0,0));
+    Region chunks(&aManager);
+    for (int x = 0; x < 6; x++) {
+        for (int z = 0; z < 6; z++) {
+            chunks.setBlock(localizedRegionCoord(x,1,z), 1);
+            chunks.setBlock(localizedRegionCoord(x,2,z), 2);
+        }
+    }
+    auto drawingSize = chunks.renderAroundChunk(regionCoord(0,0,0), 16, 8);
 
     // Main loop
     spdlog::info("Initialization finished! Entering main loop.");

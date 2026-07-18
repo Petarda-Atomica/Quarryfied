@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ankerl/unordered_dense.h"
-#include "BS_thread_pool.hpp"
+#include "BS_thread_pool.hpp" // IWYU pragma: keep
 #include "blocks.hpp"
 #include "chunk/raw_chunk.hpp"
 #include "chunk/palleted_chunk.hpp"
@@ -9,10 +9,17 @@
 #include "chunk/config.hpp"
 #include "glbinding/gl/types.h"
 #include "glbinding/gl/functions.h" // IWYU pragma: keep
-#include "spdlog/spdlog.h"
+#include "glbinding/gl/bitfield.h"  // IWYU pragma: keep
+#include "spdlog/spdlog.h" // IWYU pragma: keep
 #include "utils/enums.hpp"
+#include <vector>
 #include <array>
+#include <cstddef>
 #include <cstdint>
+#include <cmath> // IWYU pragma: keep
+#include <iterator> // IWYU pragma: keep
+#include "graphics/structs.hpp"
+#include "world/chunk/config.hpp"
 
 class Region {
 private:
@@ -43,5 +50,18 @@ public:
     Region(const Region&) = delete;
     Region& operator=(const Region&) = delete;
 
-    void renderAroundChunk(chunkCoord chunkCoords, uint_fast8_t renderDistance);
+    // Set block
+    setBlockStatus setBlock(localizedRegionCoord coords, uint16_t blockID);
+
+    size_t renderAroundChunk(regionCoord chunkCoords, int_fast8_t renderDistance, int_fast8_t verticalRenderDistance);
+
+    inline void draw(GLsizei drawingSize) {
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, MDIcmdsSSBO);
+        glMultiDrawArraysIndirect(
+            GL_TRIANGLE_STRIP,
+            (void*)0,
+            drawingSize,
+            0
+        );
+    }
 };

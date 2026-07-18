@@ -6,6 +6,7 @@
 #include "blocks.hpp"
 #include "config.hpp"
 #include "graphics/structs.hpp"
+#include "palleted_chunk.hpp" // IWYU pragma: keep
 
 struct SparseChunk {
     struct sparseEncoding {
