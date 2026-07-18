@@ -66,9 +66,23 @@ FetchContent_MakeAvailable(ryml)
 
 # --- Ankerl (hashmaps) ---
 FetchContent_Declare(
-unordered_dense
+  unordered_dense
   GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
   GIT_TAG        main
 )
 MESSAGE(STATUS "Configuring remote external dependency: ankerl")
 FetchContent_MakeAvailable(unordered_dense)
+
+# --- BS::thread_pool (thread pools) ---
+FetchContent_Declare(
+  bs_thread_pool
+  GIT_REPOSITORY https://github.com/bshoshany/thread-pool.git
+  GIT_TAG        master
+)
+MESSAGE(STATUS "Configuring remote external dependency: BS::thread_pool")
+FetchContent_MakeAvailable(bs_thread_pool)
+ADD_LIBRARY(bs_thread_pool_local INTERFACE)
+TARGET_INCLUDE_DIRECTORIES(bs_thread_pool_local INTERFACE ${bs_thread_pool_SOURCE_DIR}/include)
+FIND_PACKAGE(Threads REQUIRED)
+TARGET_LINK_LIBRARIES(bs_thread_pool_local INTERFACE Threads::Threads)
+ADD_LIBRARY(BS::thread_pool ALIAS bs_thread_pool_local)

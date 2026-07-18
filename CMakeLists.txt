@@ -49,6 +49,7 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME}
     lua_lib
     ryml::ryml
     unordered_dense
+    BS::thread_pool
 )
 
 # Include LuaBridge3

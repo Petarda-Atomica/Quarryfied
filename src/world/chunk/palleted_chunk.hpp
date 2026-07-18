@@ -12,6 +12,7 @@ struct PalletedChunk {
     std::array<uint16_t, 255> pallete{};
     std::array<uint8_t, FLATTENED_CHUNK_SIZE> blockArray{};
 
+public:
     inline uint8_t getPalletedBlockAt(chunkCoord coords) {
         return blockArray[coords.flatten()];
     }
