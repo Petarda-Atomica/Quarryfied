@@ -1,18 +1,5 @@
 #include "sparse_chunk.hpp"
-
-// std::unique_ptr<PalletedChunk<SIZE>> toPalleted() {
-//     auto output = std::make_unique<PalletedChunk<SIZE>>();
-//     output->pallete[0] = 0;
-
-//     for (size_t index = 1; auto& value : blockArray) {
-//         output->pallete[index] = value.blockID;
-//         for (auto& value2 : value.coordinates) {
-//             output->blockArray[value2.flatten()] = index;
-//         }
-//         ++index;
-//     }
-//     return output;
-// }
+#include "world/chunk/palleted_chunk.hpp"
 
 setBlockStatus SparseChunk::setBlock(chunkCoord coords, uint16_t blockID) {
     bool setSuccess = false;
@@ -82,4 +69,21 @@ std::array<bool, CHUNK_SIZE * CHUNK_SIZE> SparseChunk::faceMask(cardinalDirectio
     }
 
     return output;
+}
+
+void SparseChunk::mesh(std::vector<GPU::CubeFace>& faces, std::vector<GPU::DrawArraysIndirectCommand>& cmds, regionCoord regionCoord, std::array<std::array<bool, CHUNK_SIZE * CHUNK_SIZE>, 6> neighboursFaceMask, BlocksManager* blocksManager) {
+    // Convert to a temp palleted chunk
+    PalletedChunk tempPalletedChunk;
+    tempPalletedChunk.pallete[0] = 0;
+
+    for (size_t index = 1; auto& value : blockArray) {
+        tempPalletedChunk.pallete[index] = value.blockID;
+        for (auto& value2 : value.coordinates) {
+            tempPalletedChunk.blockArray[value2.flatten()] = index;
+        }
+        ++index;
+    }
+
+    // Use the palleted mesher
+    return tempPalletedChunk.mesh(faces, cmds, regionCoord, neighboursFaceMask, blocksManager);
 }
